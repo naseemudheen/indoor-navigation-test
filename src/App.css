@@ -1,0 +1,22 @@
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* For IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+#floorplan-container {
+  height: 100%;
+  background-color: #f9f5ec;
+}
+
+.rc-rate-star-focused, .rc-rate-star-zero {
+  @apply [&>div>div>div>svg]:!fill-gray-300 [&>div>div>div>svg]:stroke-gray-300
+}
+
+.rc-rate-star-full {
+  @apply [&>div>div>div>svg]:!fill-orange [&>div>div>div>svg]:stroke-orange
+}
