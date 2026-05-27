@@ -3,13 +3,21 @@ import "./Creator.css";
 import { scaleLinear, zoomIdentity,zoom, easeCircleInOut } from "d3";
 import dijkstrajs from "dijkstrajs";
 
-import FloorplanImage from "./assets/ground-md.svg";
-import basementfloor from './assets/undergroud-md.svg'
-import firstFloor from './assets/firstfloor-md.svg'
-import secondFloor from './assets/2ndfloor-md.svg'
-import CMFirstFloor from './assets/CW-1.svg'
-import CMSecondFloor from './assets/CW-2.svg'
-import CMThirdFloor from './assets/CW-3.svg'
+import simpleFloor from "../../assets/floors/simple.svg";
+// import FloorplanImage from "./assets/ground-md.svg";
+// import basementfloor from './assets/undergroud-md.svg'
+// import firstFloor from './assets/firstfloor-md.svg'
+// import secondFloor from './assets/2ndfloor-md.svg'
+// import CMFirstFloor from './assets/CW-1.svg'
+// import CMSecondFloor from './assets/CW-2.svg'
+// import CMThirdFloor from './assets/CW-3.svg'
+const FloorplanImage = simpleFloor;
+const basementfloor = simpleFloor;
+const firstFloor = simpleFloor;
+const secondFloor = simpleFloor;
+const CMFirstFloor = simpleFloor;
+const CMSecondFloor = simpleFloor;
+const CMThirdFloor = simpleFloor;
 
 // import FloorplanImage90 from "./static/floorplan90.png";
 // import FloorplanImage180 from "./static/floorplan180.png";
@@ -21,13 +29,13 @@ import Floorplan from "./components/FloorPlan";
 import PathCreationFloorplan from "./components/PathCreationFloorPlan";
 import PathEditingFloorplan from "./components/PathEditingFloorPlan";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "./utils";
-import groundData2 from '../../data/maps/groundData.json'
-import basmentData from '../../data/maps/basementData.json'
-import secondData from '../../data/maps/secondFloorData.json'
-import firstData from '../../data/maps/firstFloorData.json'
-import cancerFirst from '../../data/maps/cancer1Data.json'
-import cancerSecond from '../../data/maps/cancer2Data.json'
-import cancerThird from '../../data/maps/cancer3Data.json'
+import groundData2 from '../../test.json'
+// import basmentData from '../../data/maps/basementData.json'
+// import secondData from '../../data/maps/secondFloorData.json'
+// import firstData from '../../data/maps/firstFloorData.json'
+// import cancerFirst from '../../data/maps/cancer1Data.json'
+// import cancerSecond from '../../data/maps/cancer2Data.json'
+// import cancerThird from '../../data/maps/cancer3Data.json'
 
 
 function getNaturalImageDimensions(path) {
@@ -202,20 +210,7 @@ export default function App() {
     setDigitisationZone({ origin: [100, 800], width: 100, height: 100 });
     setSelectedFocusView(null);
     resetSelectedUnits();
-    if(type==='B'){
-      getNaturalImageDimensions(basementfloor)
-      .then((result) => {
-        setFloorplan(result);
-        setDigitisationZone({
-          origin: [100,800],
-          width: result.width,
-          height: result.height
-        });
-        setIsGettingInitalState(false);
-      })
-      .catch((err) => console.log(err));
-      setPathData(basmentData)
-    }else if(type==='G'){
+    if(type==='G'){
       getNaturalImageDimensions(FloorplanImage)
       .then((result) => {
         setFloorplan(result);
@@ -228,71 +223,6 @@ export default function App() {
       })
       .catch((err) => console.log(err));
       setPathData(groundData2)
-    } else if(type==="1"){
-      getNaturalImageDimensions(firstFloor)
-      .then((result) => {
-        setFloorplan(result);
-        setDigitisationZone({
-          origin: [100,800],
-          width: result.width,
-          height: result.height
-        });
-        setIsGettingInitalState(false);
-      })
-      .catch((err) => console.log(err));
-      setPathData(firstData)
-    }else if(type==='2'){
-      getNaturalImageDimensions(secondFloor)
-      .then((result) => {
-        setFloorplan(result);
-        setDigitisationZone({
-          origin: [100,800],
-          width: result.width,
-          height: result.height
-        });
-        setIsGettingInitalState(false);
-      })
-      .catch((err) => console.log(err));
-      setPathData(secondData)
-    }else if(type==='C1'){
-      getNaturalImageDimensions(CMFirstFloor)
-      .then((result) => {
-        setFloorplan(result);
-        setDigitisationZone({
-          origin: [100,800],
-          width: result.width,
-          height: result.height
-        });
-        setIsGettingInitalState(false);
-      })
-      .catch((err) => console.log(err));
-      setPathData(cancerFirst)
-    }else if(type==='C2'){
-      getNaturalImageDimensions(CMSecondFloor)
-      .then((result) => {
-        setFloorplan(result);
-        setDigitisationZone({
-          origin: [100,800],
-          width: result.width,
-          height: result.height
-        });
-        setIsGettingInitalState(false);
-      })
-      .catch((err) => console.log(err));
-      setPathData(cancerSecond)
-    }else if(type==='C3'){
-      getNaturalImageDimensions(CMThirdFloor)
-      .then((result) => {
-        setFloorplan(result);
-        setDigitisationZone({
-          origin: [100,800],
-          width: result.width,
-          height: result.height
-        });
-        setIsGettingInitalState(false);
-      })
-      .catch((err) => console.log(err));
-      setPathData(cancerThird)
     }
     setIsGettingInitalState(true);
     
@@ -660,12 +590,6 @@ export default function App() {
           <h3 className="section-title">Floor Selection</h3>
           <div className="floor-buttons">
             <button className="floor-btn" onClick={() => changeFloorplanData("G")}>Ground Floor</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("B")}>Basement</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("1")}>First Floor</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("2")}>Second Floor</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("C1")}>Cancer 1</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("C2")}>Cancer 2</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("C3")}>Cancer 3</button>
           </div>
         </div>
 
@@ -682,7 +606,7 @@ export default function App() {
                 setSelectedPath([]);
               }}
             >
-              <option value="0">No start point selected</option>
+              <option value="">No start point selected</option>
               {pathData.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -700,7 +624,7 @@ export default function App() {
                 setSelectedPath([]);
               }}
             >
-              <option value="0">No end point selected</option>
+              <option value="">No end point selected</option>
               {pathData
                 .filter((item) => item.name !== selectedStartPath)
                 .map((item) => (
