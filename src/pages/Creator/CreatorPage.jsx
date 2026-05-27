@@ -670,11 +670,6 @@ export default function App() {
         <div className="sidebar-section">
           <h3 className="section-title">Path Management</h3>
           <div className="action-buttons">
-            {!isCreatingPath ? (
-              <button className="outline-btn" id="create-path-button" onClick={togglePathCreation}>
-                Create Path
-              </button>
-            ) : null}
             {!isEditingPath ? (
               <button className="outline-btn" id="edit-path-button" onClick={togglePathEditing}>
                 Edit Path

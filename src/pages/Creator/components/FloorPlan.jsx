@@ -82,7 +82,9 @@ export default function Floorplan({
   const [selectPath, setSelectPath] = useState([]);
   const [rotationAngle, setRotationAngle] = useState(0);
   const [defaultZoomApplied, setDefaultZoomApplied] = useState(false);
- const [slice,setSlice] = useState([]);
+  const [slice,setSlice] = useState([]);
+  const [selectedNodeDetail, setSelectedNodeDetail] = useState(null);
+  const [hoveredNode, setHoveredNode] = useState(null);
   React.useEffect(() => {
     if (!isGettingInitialState) {
     const defaultZoomLevel = 3; // Change this to your desired default zoom level
@@ -658,17 +660,35 @@ console.log(trans,4534);
       .data(pathData)
       .join("circle")
       .attr("class", "path-point")
-      .attr("r", sizeScale(5) / 2)
+      .attr("r", (value) => {
+        if (selectedStartPath === value.id || selectedEndPath === value.id) {
+          return sizeScale(3.5);
+        }
+        return value.isSearchable ? sizeScale(3.8) : sizeScale(2.0);
+      })
       .attr("fill", (value) => {
         if (selectedStartPath === value.id) {
-          return "blue";
+          return "#2563eb";
         }
 
         if (selectedEndPath === value.id) {
-          return "green";
+          return "#16a34a";
         }
 
-        return "transparent";
+        return value.isSearchable ? "#ef4444" : "#94a3b8";
+      })
+      .attr("opacity", (value) => {
+        if (selectedStartPath === value.id || selectedEndPath === value.id) {
+          return 1.0;
+        }
+        return value.isSearchable ? 0.9 : 0.6;
+      })
+      .attr("stroke", "#fff")
+      .attr("stroke-width", (value) => {
+        if (selectedStartPath === value.id || selectedEndPath === value.id) {
+          return sizeScale(0.6);
+        }
+        return value.isSearchable ? sizeScale(0.8) : sizeScale(0.4);
       })
       .attr(
         "cx",
@@ -689,7 +709,19 @@ console.log(trans,4534);
             value.coordinates[0],
             value.coordinates[1]
           )[1]
-      );
+      )
+      .style("cursor", "pointer")
+      .style("pointer-events", "all")
+      .on("click", function (event, data) {
+        event.stopPropagation();
+        setSelectedNodeDetail(data);
+      })
+      .on("mouseover", function (event, data) {
+        setHoveredNode(data);
+      })
+      .on("mouseout", function (event, data) {
+        setHoveredNode(null);
+      });
   }, [
     isGettingInitialState,
     floorplan,
@@ -770,6 +802,7 @@ console.log(trans,4534);
       .attr("fill", "transparent")
       .attr("d", pathString);
   }
+  const activeNodeToShow = hoveredNode || selectedNodeDetail;
   return(
          <div id="floorplan-container">
        <button 
@@ -803,6 +836,54 @@ console.log(trans,4534);
        >
          next
        </button>
+        {activeNodeToShow && (
+          <div className="node">
+            <div className="node-header">
+              <span className="node-header-title">
+                {activeNodeToShow.id === selectedNodeDetail?.id ? "Node Details" : "Node Details (Hovered)"}
+              </span>
+              <button
+                type="button"
+                className="node-edit-btn"
+                onClick={() => setSelectedNodeDetail(null)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="node-row">
+              <strong>ID:</strong>
+              <span>{activeNodeToShow.id}</span>
+            </div>
+            <div className="node-row">
+              <strong>Coordinates:</strong>
+              <span>{activeNodeToShow.coordinates?.map(c => typeof c === 'number' ? c.toFixed(4) : c).join(", ")}</span>
+            </div>
+            <div className="node-grid-row" style={{ gridTemplateColumns: activeNodeToShow.isSearchable ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}>
+              {activeNodeToShow.isSearchable && (
+                <div>
+                  <strong>Name</strong>
+                  <span>{activeNodeToShow.name || "—"}</span>
+                </div>
+              )}
+              <div>
+                <strong>Floor</strong>
+                <span>{activeNodeToShow.floor !== undefined ? activeNodeToShow.floor : "—"}</span>
+              </div>
+              <div>
+                <strong>Searchable</strong>
+                <span>{activeNodeToShow.isSearchable ? "Yes" : "No"}</span>
+              </div>
+            </div>
+            <div className="node-neighbors">
+              <strong>Neighbors:</strong>
+              <div className="node-neighbors-list">
+                {activeNodeToShow.neighbors?.map((item, index) => (
+                  <span key={index} className="node-neighbor-item">{item?.id}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
      </div>
     )
     

@@ -26,9 +26,11 @@ export default function Floorplan({
     React.useState("");
   const [detailedSelectedPoint, setDetailedSelectedPoint] = useState({});
   const [previouslySelectedPoint, setPrevisiouslySelectedPoint] = useState({});
+  const [hoveredNode, setHoveredNode] = React.useState(null);
   const [isJoinMode, setIsJoinMode] = React.useState(false);
   const [isNameClicked, setIsNameClicked] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = React.useState(false);
+  const [isEditingCoords, setIsEditingCoords] = React.useState(false);
   const [undoStack, setUndoStack] = React.useState([]);
   const [redoStack, setRedoStack] = React.useState([]);
   const translationRef = React.useRef([0, 0]);
@@ -36,7 +38,11 @@ export default function Floorplan({
   const idCounter = React.useRef(0);
   function savePath() {
     if (pathData.length <= 0) return;
-
+    const invalidNodes = pathData.filter(node => node.isSearchable && (!node.name || node.name.trim() === ""));
+    if (invalidNodes.length > 0) {
+      alert(`The following searchable nodes are missing mandatory names: ${invalidNodes.map(n => n.id).join(", ")}. Please assign names before saving.`);
+      return;
+    }
     setPath(pathData);
     togglePathCreation();
   }
@@ -76,6 +82,20 @@ export default function Floorplan({
         .data([floorplan])
         .join("g")
         .attr("class", "path-floorplan-svg-group");
+
+      const defs = svg.selectAll("defs").data([0]).join("defs");
+      const pattern = defs.selectAll("pattern#grid").data([0]).join("pattern")
+        .attr("id", "grid")
+        .attr("width", 20)
+        .attr("height", 20)
+        .attr("patternUnits", "userSpaceOnUse");
+        
+      pattern.selectAll("path").data([0]).join("path")
+        .attr("d", "M 20 0 L 0 0 0 20")
+        .attr("fill", "none")
+        .attr("stroke", "rgba(0,0,0,0.2)")
+        .attr("stroke-width", 1);
+
       groupElement
         .selectAll(".path-floorplan-image")
         .data([floorplan])
@@ -84,6 +104,16 @@ export default function Floorplan({
         .attr("xlink:href", (value) => value.floorplanPath)
         .attr("width", (value) => value.width)
         .attr("height", (value) => value.height);
+
+      groupElement
+        .selectAll(".grid-overlay")
+        .data([floorplan])
+        .join("rect")
+        .attr("class", "grid-overlay")
+        .attr("width", (value) => value.width)
+        .attr("height", (value) => value.height)
+        .attr("fill", "url(#grid)")
+        .style("pointer-events", "none");
 
       svg.call(
         zoom().on("zoom", (ev) => {
@@ -285,8 +315,16 @@ export default function Floorplan({
       .data([currentSelectedPathPoint])
       .join("circle")
       .attr("class", "path-current-selected-point")
-      .attr("r", sizeScale(3))
+      .attr("r", (value) => {
+        const nodeObj = pathData.find(item => item.id === value);
+        return nodeObj?.isSearchable ? sizeScale(4.5) : sizeScale(3.0);
+      })
       .attr("fill", "blue")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", (value) => {
+        const nodeObj = pathData.find(item => item.id === value);
+        return nodeObj?.isSearchable ? sizeScale(0.8) : sizeScale(0.4);
+      })
       .attr("cx", (value) => {
         const currentPathData = pathData.find((item) => item.id === value);
 
@@ -310,6 +348,15 @@ export default function Floorplan({
       .on("click", function (event, data) {
         event.stopPropagation();
         return;
+      })
+      .on("mouseover", function (event, value) {
+        const nodeObj = pathData.find(item => item.id === value);
+        if (nodeObj) {
+          setHoveredNode(nodeObj);
+        }
+      })
+      .on("mouseout", function (event, value) {
+        setHoveredNode(null);
       });
   }, [
     isGettingInitialState,
@@ -331,8 +378,11 @@ export default function Floorplan({
       .data(pathData.filter((item) => item.id !== currentSelectedPathPoint))
       .join("circle")
       .attr("class", "path-point")
-      .attr("r", sizeScale(2))
-      .attr("fill", "red")
+      .attr("r", (value) => value.isSearchable ? sizeScale(3.8) : sizeScale(2.0))
+      .attr("fill", (value) => value.isSearchable ? "#ef4444" : "#94a3b8")
+      .attr("opacity", (value) => value.isSearchable ? 0.9 : 0.6)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", (value) => value.isSearchable ? sizeScale(0.8) : sizeScale(0.4))
       .attr(
         "cx",
         (value) =>
@@ -449,6 +499,12 @@ export default function Floorplan({
 
         setCurrentSelectedPathPoint(data.id);
         setDetailedSelectedPoint(data);
+      })
+      .on("mouseover", function (event, data) {
+        setHoveredNode(data);
+      })
+      .on("mouseout", function (event, data) {
+        setHoveredNode(null);
       });
   }, [
     isGettingInitialState,
@@ -555,7 +611,8 @@ export default function Floorplan({
   };
 
   console.log(pathData);
-  console.log(detailedSelectedPoint);
+  const activeNodeToShow = (hoveredNode && !isEditingCoords) ? hoveredNode : (currentSelectedPathPoint ? detailedSelectedPoint : null);
+  const isSelectedNode = activeNodeToShow?.id === currentSelectedPathPoint;
   return (
     <React.Fragment>
       <div className="overlay-tools-container">
@@ -575,48 +632,169 @@ export default function Floorplan({
         </div>
       </div>
       <div id="path-floorplan-container">
-        {currentSelectedPathPoint?.length !== 0 && (
+      {activeNodeToShow && (
           <div className="node" style={{ padding: "10px", background: "#f9f9f9", border: "1px solid #ccc", marginTop: "10px" }}>
-            <strong>ID:</strong> {detailedSelectedPoint.id}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontWeight: "bold", fontSize: "1.1em" }}>
+                {isSelectedNode ? "Node Details" : "Node Details (Hovered)"}
+              </span>
+              {isSelectedNode && (
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (isEditingCoords) {
+                      if (activeNodeToShow.isSearchable && (!activeNodeToShow.name || activeNodeToShow.name.trim() === "")) {
+                        alert("Name is mandatory for searchable nodes.");
+                        return;
+                      }
+                    }
+                    setIsEditingCoords(!isEditingCoords);
+                  }}
+                  style={{ padding: "4px 12px", cursor: "pointer" }}
+                >
+                  {isEditingCoords ? "Done Editing" : "Edit Node"}
+                </button>
+              )}
+            </div>
+            <strong>ID:</strong> {activeNodeToShow.id}
             <br />
-            <strong>Coordinates:</strong> {detailedSelectedPoint?.coordinates?.map(c => c.toFixed(4)).join(", ")}
-            <br />
-            <label>
-              <strong>Name:</strong>{" "}
-              <input 
-                type="text" 
-                value={detailedSelectedPoint.name || ""} 
-                onChange={(e) => updateNodeProperty("name", e.target.value)} 
-              />
-            </label>
-            <br />
-            <label>
-              <strong>Floor:</strong>{" "}
-              <input 
-                type="number" 
-                value={detailedSelectedPoint.floor !== undefined ? detailedSelectedPoint.floor : ""} 
-                onChange={(e) => updateNodeProperty("floor", e.target.value === "" ? "" : parseInt(e.target.value, 10))} 
-              />
-            </label>
-            <br />
-            <label>
-              <strong>Searchable:</strong>{" "}
-              <input 
-                type="checkbox" 
-                checked={detailedSelectedPoint.isSearchable || false} 
-                onChange={(e) => updateNodeProperty("isSearchable", e.target.checked)} 
-              />
-            </label>
-            <br />
-            <strong>Neighbors:</strong>
-            {detailedSelectedPoint?.neighbors?.map((item) => {
-              console.log(item.id);
-              return (
-                <div key={item.id}>
-                  <p style={{ margin: 0 }}>{item?.id}</p>
+            
+            {isEditingCoords && isSelectedNode ? (
+              <>
+                <div style={{ display: "flex", gap: "10px", margin: "5px 0", alignItems: "center" }}>
+                  <strong>Coordinates:</strong>
+                  <label>
+                     <strong>X:</strong>{" "}
+                    <input 
+                      type="text" 
+                      style={{ width: "120px" }}
+                      value={activeNodeToShow?.coordinates?.[0] ?? 0} 
+                      onKeyDown={(e) => {
+                        if (
+                          !/^[0-9.-]$/.test(e.key) && 
+                          !['Backspace', 'ArrowLeft', 'ArrowRight', 'Delete', 'Tab'].includes(e.key) &&
+                          !e.ctrlKey && !e.metaKey
+                        ) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const newCoords = [e.target.value, activeNodeToShow.coordinates[1]];
+                        updateNodeProperty("coordinates", newCoords);
+                      }}
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value);
+                        updateNodeProperty("coordinates", [isNaN(val) ? 0 : val, activeNodeToShow.coordinates[1]]);
+                      }}
+                    />
+                  </label>
+                  <label>
+                    <strong>Y:</strong>{" "}
+                    <input 
+                      type="text" 
+                      style={{ width: "120px" }}
+                      value={activeNodeToShow?.coordinates?.[1] ?? 0} 
+                      onKeyDown={(e) => {
+                        if (
+                          !/^[0-9.-]$/.test(e.key) && 
+                          !['Backspace', 'ArrowLeft', 'ArrowRight', 'Delete', 'Tab'].includes(e.key) &&
+                          !e.ctrlKey && !e.metaKey
+                        ) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const newCoords = [activeNodeToShow.coordinates[0], e.target.value];
+                        updateNodeProperty("coordinates", newCoords);
+                      }} 
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value);
+                        updateNodeProperty("coordinates", [activeNodeToShow.coordinates[0], isNaN(val) ? 0 : val]);
+                      }}
+                    />
+                  </label>
                 </div>
-              );
-            })}
+                {activeNodeToShow.isSearchable && (
+                  <>
+                    <label>
+                      <strong>Name:</strong>{" "}
+                      <input 
+                        type="text" 
+                        value={activeNodeToShow.name || ""} 
+                        onChange={(e) => updateNodeProperty("name", e.target.value)} 
+                      />
+                    </label>
+                    <br />
+                  </>
+                )}
+                <label>
+                  <strong>Floor:</strong>{" "}
+                  <input 
+                    type="number" 
+                    value={activeNodeToShow.floor !== undefined ? activeNodeToShow.floor : ""} 
+                    onChange={(e) => updateNodeProperty("floor", e.target.value === "" ? "" : parseInt(e.target.value, 10))} 
+                  />
+                </label>
+                <br />
+                <label>
+                  <strong>Searchable:</strong>{" "}
+                  <input 
+                    type="checkbox" 
+                    checked={activeNodeToShow.isSearchable || false} 
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      updateNodeProperty("isSearchable", checked);
+                      if (!checked) {
+                        updateNodeProperty("name", "");
+                      }
+                    }} 
+                  />
+                </label>
+                <br />
+              </>
+            ) : (
+              <>
+                <div style={{ margin: "6px 0" }}>
+                  <strong>Coordinates:</strong> {activeNodeToShow?.coordinates?.map(c => typeof c === 'number' ? c.toFixed(4) : c).join(", ")}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: activeNodeToShow.isSearchable ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: "10px", margin: "8px 0", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "6px 0" }}>
+                  {activeNodeToShow.isSearchable && (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <strong style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.03em" }}>Name</strong>
+                      <span style={{ fontSize: "0.85rem", color: "#1e293b", fontWeight: "500" }}>{activeNodeToShow.name || "N/A"}</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <strong style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.03em" }}>Floor</strong>
+                    <span style={{ fontSize: "0.85rem", color: "#1e293b", fontWeight: "500" }}>{activeNodeToShow.floor !== undefined ? activeNodeToShow.floor : "N/A"}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <strong style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.03em" }}>Searchable</strong>
+                    <span style={{ fontSize: "0.85rem", color: "#1e293b", fontWeight: "500" }}>{activeNodeToShow.isSearchable ? "Yes" : "No"}</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <strong>Neighbors:</strong>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+              {activeNodeToShow?.neighbors?.map((item) => (
+                <span 
+                  key={item.id} 
+                  style={{ 
+                    padding: "3px 8px", 
+                    backgroundColor: "#f1f5f9", 
+                    borderRadius: "4px", 
+                    fontSize: "0.75rem", 
+                    color: "#334155", 
+                    fontFamily: "'SF Mono', 'Menlo', monospace",
+                    border: "1px solid #e2e8f0"
+                  }}
+                >
+                  {item?.id}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
