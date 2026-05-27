@@ -741,6 +741,12 @@ console.log(trans,4534);
         .range([0, (Math.abs(digitisationZone.width) * 10) / 100]);
       const D3SVG = select(".floorplan-svg-group");
 
+      const currentZoom = trans?.k || 1;
+      const scaledIconSize = currentZoom > 3 ? 6.0 / currentZoom * 3 : 6.0;
+      const scaledTextSize = currentZoom > 3 ? 3.5 / currentZoom * 3 : 3.5;
+      const scaledIconOffset = scaledIconSize / 2;
+      const scaledTextOffset = currentZoom > 3 ? 1.0 / currentZoom * 3 : 1.0;
+
       D3SVG.selectAll(".map-marker-icon")
         .data(markerData.filter(m => m.type === 'icon'))
         .join("image")
@@ -749,10 +755,10 @@ console.log(trans,4534);
            const iconKey = value.iconType ? value.iconType.toLowerCase() : "toilet";
            return IconMap[iconKey] || IconMap["toilet"];
         })
-        .attr("width", sizeScale(6.0))
-        .attr("height", sizeScale(6.0))
-        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0] - sizeScale(3.0))
-        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] - sizeScale(3.0))
+        .attr("width", sizeScale(scaledIconSize))
+        .attr("height", sizeScale(scaledIconSize))
+        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0] - sizeScale(scaledIconOffset))
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] - sizeScale(scaledIconOffset))
         .style("pointer-events", "none");
         
       D3SVG.selectAll(".map-marker-text")
@@ -760,9 +766,9 @@ console.log(trans,4534);
         .join("text")
         .attr("class", "map-marker-text")
         .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0])
-        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] + sizeScale(1.0))
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] + sizeScale(scaledTextOffset))
         .attr("text-anchor", "middle")
-        .attr("font-size", `${sizeScale(3.5)}px`)
+        .attr("font-size", `${sizeScale(scaledTextSize)}px`)
         .attr("font-weight", "bold")
         .attr("fill", "black")
         .style("pointer-events", "none")
@@ -773,7 +779,8 @@ console.log(trans,4534);
     floorplan,
     digitisationZone,
     currentRotation,
-    markerData
+    markerData,
+    trans?.k
   ]);
 
   React.useEffect(() => {

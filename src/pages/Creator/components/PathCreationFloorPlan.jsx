@@ -30,6 +30,7 @@ export default function Floorplan({
   const [isJoinMode, setIsJoinMode] = React.useState(false);
   const [isNameClicked, setIsNameClicked] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = React.useState(false);
+  const [isSplitMode, setIsSplitMode] = React.useState(false);
   const [isEditingCoords, setIsEditingCoords] = React.useState(false);
   const [undoStack, setUndoStack] = React.useState([]);
   const [redoStack, setRedoStack] = React.useState([]);
@@ -131,7 +132,7 @@ export default function Floorplan({
 
       svg.on("click", function (event) {
         setUndoStack((prevUndoStack) => [...prevUndoStack, pathData]);
-        if (isJoinMode || isDeleteMode) return;
+        if (isJoinMode || isDeleteMode || isSplitMode) return;
         console.log(idCounter.current);
         
         const coordinates = pointer(event);
@@ -235,6 +236,7 @@ export default function Floorplan({
     currentSelectedPathPoint,
     isJoinMode,
     isDeleteMode,
+    isSplitMode,
   ]);
 
   React.useEffect(() => {
@@ -515,6 +517,7 @@ export default function Floorplan({
     currentSelectedPathPoint,
     isJoinMode,
     isDeleteMode,
+    isSplitMode,
   ]);
   console.log(previouslySelectedPoint, "prev");
   console.log(detailedSelectedPoint, "now");
@@ -530,12 +533,14 @@ export default function Floorplan({
         return item?.neighbors
           .map((item1) => {
             if (item1.isParent) return null;
-            return [
-              item.coordinates[0],
-              item.coordinates[1],
-              item1.coordinates[0],
-              item1.coordinates[1],
-            ];
+            return {
+              x1: item.coordinates[0],
+              y1: item.coordinates[1],
+              x2: item1.coordinates[0],
+              y2: item1.coordinates[1],
+              sourceId: item.id,
+              targetId: item1.id
+            };
           })
           .filter((item1) => item1 !== null);
       })
@@ -549,8 +554,8 @@ export default function Floorplan({
         const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
           currentRotation,
-          value[0],
-          value[1]
+          value.x1,
+          value.y1
         );
 
         return coordinates[0];
@@ -559,8 +564,8 @@ export default function Floorplan({
         const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
           currentRotation,
-          value[0],
-          value[1]
+          value.x1,
+          value.y1
         );
 
         return coordinates[1];
@@ -569,8 +574,8 @@ export default function Floorplan({
         const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
           currentRotation,
-          value[2],
-          value[3]
+          value.x2,
+          value.y2
         );
 
         return coordinates[0];
@@ -579,16 +584,104 @@ export default function Floorplan({
         const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
           currentRotation,
-          value[2],
-          value[3]
+          value.x2,
+          value.y2
         );
 
         return coordinates[1];
       })
       .attr("stroke", "red")
-      .attr("stroke-width", () => sizeScale(1))
+      .attr("stroke-width", () => sizeScale(1.5))
+      .style("cursor", "pointer")
+      .style("pointer-events", "all")
       .on("click", function (event, data) {
         event.stopPropagation();
+        if (!isSplitMode) return;
+        
+        setUndoStack((prevUndoStack) => [...prevUndoStack, pathData]);
+        
+        const svgNode = document.querySelector(".path-floorplan-svg");
+        const coordinates = pointer(event, svgNode);
+        const xCoordinate =
+          (coordinates[0] - translationRef.current[0]) / scaleRef.current;
+        const yCoordinate =
+          (coordinates[1] - translationRef.current[1]) / scaleRef.current;
+
+        const scaledCoordinates =
+          getPercentageCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            xCoordinate,
+            yCoordinate
+          );
+
+        setPathData((currentPathData) => {
+          const sourceNode = currentPathData.find(n => n.id === data.sourceId);
+          const targetNode = currentPathData.find(n => n.id === data.targetId);
+          if (!sourceNode || !targetNode) return currentPathData;
+
+          const newNodeId = `path-${idCounter.current}`;
+          idCounter.current = idCounter.current + 1;
+
+          const distanceToSource = getDistance(scaledCoordinates[0], scaledCoordinates[1], sourceNode.coordinates[0], sourceNode.coordinates[1]);
+          const distanceToTarget = getDistance(scaledCoordinates[0], scaledCoordinates[1], targetNode.coordinates[0], targetNode.coordinates[1]);
+
+          const newNode = {
+            id: newNodeId,
+            coordinates: scaledCoordinates,
+            neighbors: [
+              {
+                id: sourceNode.id,
+                coordinates: sourceNode.coordinates,
+                distance: distanceToSource,
+                isParent: true
+              },
+              {
+                id: targetNode.id,
+                coordinates: targetNode.coordinates,
+                distance: distanceToTarget
+              }
+            ]
+          };
+
+          const newSourceNode = {
+            ...sourceNode,
+            neighbors: sourceNode.neighbors.map(n => {
+              if (n.id === targetNode.id) {
+                return {
+                  id: newNode.id,
+                  coordinates: newNode.coordinates,
+                  distance: distanceToSource
+                };
+              }
+              return n;
+            })
+          };
+
+          const newTargetNode = {
+            ...targetNode,
+            neighbors: targetNode.neighbors.map(n => {
+              if (n.id === sourceNode.id) {
+                return {
+                  id: newNode.id,
+                  coordinates: newNode.coordinates,
+                  distance: distanceToTarget,
+                  isParent: true
+                };
+              }
+              return n;
+            })
+          };
+
+          setCurrentSelectedPathPoint(newNodeId);
+          setDetailedSelectedPoint(newNode);
+
+          return currentPathData.map(n => {
+            if (n.id === sourceNode.id) return newSourceNode;
+            if (n.id === targetNode.id) return newTargetNode;
+            return n;
+          }).concat([newNode]);
+        });
       });
   }, [
     isGettingInitialState,
@@ -597,6 +690,7 @@ export default function Floorplan({
     currentRotation,
     pathData,
     currentSelectedPathPoint,
+    isSplitMode
   ]);
   const updateNodeProperty = (property, value) => {
     const indexToUpdate = pathData.findIndex((item) => item.id === currentSelectedPathPoint);
@@ -627,8 +721,9 @@ export default function Floorplan({
           <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
             delete mode
           </button>
-
           <span>{isDeleteMode ? " delete mode active" : ""}</span>
+          <button onClick={() => setIsSplitMode(!isSplitMode)}>split mode</button>
+          <span>{isSplitMode ? " split mode active" : ""}</span>
         </div>
       </div>
       <div id="path-floorplan-container">
