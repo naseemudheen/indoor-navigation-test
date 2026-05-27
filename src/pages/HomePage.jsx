@@ -7,7 +7,9 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import DirectionFloor from "../components/DirectionFloor";
 import { useDispatch, useSelector } from "react-redux";
 const basementData = [];
-import groundData from "../data/maps/groundfloor_data.json";
+import _groundData from "../data/maps/groundfloor_data.json";
+const groundData = _groundData.nodes || _groundData;
+const markerData = _groundData.markers || [];
 const firstData = [];
 const secondData = [];
 const cancerFirst = [];
@@ -939,6 +941,7 @@ const HomePage = () => {
           labels={labels}
           lowLabels={lowLabels}
           icons={iconData}
+          markerData={markerData}
         />
       </div>
       <Header />

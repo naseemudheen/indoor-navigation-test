@@ -159,16 +159,19 @@ export default function App() {
   const [focusViews, setFocusViews] = React.useState([]);
   const [isCreatingFocusView, setIsCreatingFocusView] = React.useState(false);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
-  const [pathData, setPathData] = React.useState(groundData2);
-  const savePathToDisk = async (newData) => {
+  const [pathData, setPathData] = React.useState(groundData2.nodes || groundData2);
+  const [markerData, setMarkerData] = React.useState(groundData2.markers || []);
+  const savePathToDisk = async (newData, newMarkers) => {
     setPathData(newData);
+    if (newMarkers) setMarkerData(newMarkers);
     try {
+      const payload = { nodes: newData, markers: newMarkers || markerData };
       const response = await fetch("/api/save", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newData),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         console.log("Successfully saved map path data to src/data/maps/groundfloor_data.json");
@@ -243,7 +246,8 @@ export default function App() {
         setIsGettingInitalState(false);
       })
       .catch((err) => console.log(err));
-      setPathData(groundData2)
+      setPathData(groundData2.nodes || groundData2);
+      setMarkerData(groundData2.markers || []);
     }
     setIsGettingInitalState(true);
     
@@ -587,7 +591,7 @@ export default function App() {
   }
   console.log(groundData2);
   
-  const flooringData = groundData2.map((item) => ({
+  const flooringData = (groundData2.nodes || groundData2).map((item) => ({
     ...item,
     floor: 0,
   }));
@@ -707,6 +711,7 @@ export default function App() {
               selectedEndPath={selectedEndPath}
               selectedPath={selectedPath}
               zoomToUnit={zoomToUnitAndDetectNearby}
+              markerData={markerData}
             />
           ) : isCreatingPath ? (
             <PathCreationFloorplan
@@ -725,7 +730,9 @@ export default function App() {
               currentRotation={currentRotation}
               togglePathEditing={togglePathEditing}
               pathinfo={pathData}
-              setPath={(data) => savePathToDisk(data)}
+              setPath={(data, mData) => savePathToDisk(data, mData || markerData)}
+              markerData={markerData}
+              setMarkerData={(data) => savePathToDisk(pathData, data)}
             />
           )}
         </div>

@@ -47,7 +47,7 @@ function App() {
       "coordinates": [path.coordinates[0], path.coordinates[1]],
     }));
   };
-  const simplifiedData = simplifyCoordinates(pathData);
+  const simplifiedData = simplifyCoordinates(pathData.nodes || pathData);
   console.log(simplifiedData);
 
   return (

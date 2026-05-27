@@ -24,7 +24,9 @@ import { MdLocationPin, MdNorthWest } from "react-icons/md";
 import dijkstrajs from "dijkstrajs";
 // import { CollegePath,basementData,groundData } from "../data";
 const basementData = [];
-import groundData from "../data/maps/groundfloor_data.json";
+import _groundData from "../data/maps/groundfloor_data.json";
+const groundData = _groundData.nodes || _groundData;
+const markerData = _groundData.markers || [];
 const firstData = [];
 const secondData = [];
 const cancerFirst = [];
@@ -1049,7 +1051,9 @@ const DirectionPage = () => {
           errMessage={errMessage}
           distance={distance}
           setErrMsg={setErrorMessage}
+          index={index}
           icons={iconData}
+          markerData={markerData}
         />
       </div>
       <DestinationSection

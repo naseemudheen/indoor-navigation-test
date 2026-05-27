@@ -33,6 +33,7 @@ import { Link } from "react-router-dom";
 import { Location } from "./Icons";
 import { useSelector } from "react-redux";
 import { resetInitialPath, setFloor } from "../redux/mapSlice";
+import { IconMap } from "../constants/iconMap";
 // import { calculateAngle } from "../utils/helper/angleFinder";
 
 function getAngle(c, l) {
@@ -108,6 +109,7 @@ const DirectionFloor = ({
   index,
   icons,
   onPathChange,
+  markerData
 }) => {
   const dispatch = useDispatch();
   const [trans, setTrans] = useState(null);
@@ -734,6 +736,50 @@ const DirectionFloor = ({
     currentRotation,
     zoomToUnit,
   ]);
+
+  // render markers
+  React.useEffect(() => {
+    if (!isGettingInitialState && markerData && markerData.length > 0) {
+      const sizeScale = scaleLinear()
+        .domain([0, 100])
+        .range([0, (Math.abs(digitisationZone.width) * 10) / 100]);
+      const D3SVG = select(".floorplan-svg-group");
+
+      D3SVG.selectAll(".map-marker-icon")
+        .data(markerData.filter(m => m.type === 'icon'))
+        .join("image")
+        .attr("class", "map-marker-icon")
+        .attr("href", (value) => {
+           const iconKey = value.iconType ? value.iconType.toLowerCase() : "toilet";
+           return IconMap[iconKey] || IconMap["toilet"];
+        })
+        .attr("width", sizeScale(8.0))
+        .attr("height", sizeScale(8.0))
+        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0] - sizeScale(4.0))
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] - sizeScale(4.0))
+        .style("pointer-events", "none");
+        
+      D3SVG.selectAll(".map-marker-text")
+        .data(markerData.filter(m => m.type === 'label' || !m.type))
+        .join("text")
+        .attr("class", "map-marker-text")
+        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0])
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] + sizeScale(1.0))
+        .attr("text-anchor", "middle")
+        .attr("font-size", `${sizeScale(4.5)}px`)
+        .attr("font-weight", "bold")
+        .attr("fill", "#04553F")
+        .style("pointer-events", "none")
+        .text((value) => value.text);
+    }
+  }, [
+    isGettingInitialState,
+    floorplan,
+    digitisationZone,
+    currentRotation,
+    markerData
+  ]);
+
   // useEffect(()=>{
   //   if(selectedStartPath){
   //     zoomToUnit(selectedStartPath?.id)

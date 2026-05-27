@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { select, pointer, zoom, scaleLinear, drag } from "d3";
+import { IconMap } from "../../../constants/iconMap";
 import {
   lerp,
   getRealPointCoordinateRelativeToDigitisationZone,
@@ -20,12 +21,17 @@ export default function Floorplan({
   currentRotation,
   togglePathEditing,
   setPath,
-  pathinfo
+  pathinfo,
+  markerData,
+  setMarkerData
 }) {
   const [pathData, setPathData] = React.useState(pathinfo);
   const [currentSelectedPathPoint, setCurrentSelectedPathPoint] =
     React.useState("");
   const [detailedSelectedPoint,setDetailedSelectedPoint] = useState({})
+  const [internalMarkerData, setInternalMarkerData] = React.useState(markerData || []);
+  const [isMarkerMode, setIsMarkerMode] = React.useState(false);
+  const [currentSelectedMarker, setCurrentSelectedMarker] = React.useState(null);
   const [hoveredNode, setHoveredNode] = React.useState(null);
   const [isJoinMode, setIsJoinMode] = React.useState(false);
   const [isNameClicked,setIsNameClicked] = useState(false)
@@ -61,7 +67,7 @@ console.log(largestIdObject,'largestIdObject');
       alert(`The following searchable nodes are missing mandatory names: ${invalidNodes.map(n => n.id).join(", ")}. Please assign names before saving.`);
       return;
     }
-    setPath(pathData);
+    setPath(pathData, internalMarkerData);
     togglePathEditing();
   }
   function undo() {
@@ -151,12 +157,10 @@ console.log(largestIdObject,'largestIdObject');
       //PATH CREATION HERE !!!!!!
 
       svg.on("click", function (event) {
-        console.log("clicked for path");
+        console.log("clicked for path/marker");
         setUndoStack((prevUndoStack) => [...prevUndoStack, pathData]);
-        if (isJoinMode || isDeleteMode) return;
-
+        
         const coordinates = pointer(event);
-        console.log(coordinates);
         const xCoordinate =
           (coordinates[0] - translationRef.current[0]) / scaleRef.current;
         const yCoordinate =
@@ -169,6 +173,22 @@ console.log(largestIdObject,'largestIdObject');
             xCoordinate,
             yCoordinate
           );
+
+        if (isMarkerMode) {
+          if (isDeleteMode || isJoinMode) return;
+          const newMarker = {
+            id: `marker-${Date.now()}`,
+            type: "label",
+            text: "New Marker",
+            coordinates: scaledCoordinates
+          };
+          setInternalMarkerData([...internalMarkerData, newMarker]);
+          setCurrentSelectedMarker(newMarker.id);
+          setCurrentSelectedPathPoint("");
+          return;
+        }
+
+        if (isJoinMode || isDeleteMode) return;
 
         setPathData((currentPathData) => {
           if (currentPathData.length <= 0) {
@@ -633,6 +653,75 @@ console.log(largestIdObject,'largestIdObject');
     pathData,
     currentSelectedPathPoint,
   ]);
+
+  // render markers
+  React.useEffect(() => {
+    if (!isGettingInitialState) {
+      const sizeScale = scaleLinear()
+        .domain([0, 100])
+        .range([0, (Math.abs(digitisationZone.width) * 10) / 100]);
+      const D3SVG = select(".path-floorplan-svg-group");
+
+      D3SVG.selectAll(".map-marker-hitbox")
+        .data(internalMarkerData)
+        .join("circle")
+        .attr("class", "map-marker-hitbox")
+        .attr("r", (value) => value.id === currentSelectedMarker ? sizeScale(4.5) : sizeScale(3.0))
+        .attr("fill", "transparent")
+        .attr("stroke", (value) => value.id === currentSelectedMarker ? "rgba(0, 0, 255, 0.5)" : "transparent")
+        .attr("stroke-width", sizeScale(0.4))
+        .attr("cx", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0])
+        .attr("cy", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1])
+        .on("click", function(event, data) {
+           event.stopPropagation();
+           if (isDeleteMode && isMarkerMode) {
+             setInternalMarkerData(internalMarkerData.filter(m => m.id !== data.id));
+             if (currentSelectedMarker === data.id) setCurrentSelectedMarker(null);
+             return;
+           }
+           if (isMarkerMode) {
+             setCurrentSelectedMarker(data.id);
+             setCurrentSelectedPathPoint("");
+           }
+        });
+
+      D3SVG.selectAll(".map-marker-icon")
+        .data(internalMarkerData.filter(m => m.type === 'icon'))
+        .join("image")
+        .attr("class", "map-marker-icon")
+        .attr("href", (value) => {
+           const iconKey = value.iconType ? value.iconType.toLowerCase() : "toilet";
+           return IconMap[iconKey] || IconMap["toilet"];
+        })
+        .attr("width", sizeScale(6.0))
+        .attr("height", sizeScale(6.0))
+        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0] - sizeScale(3.0))
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] - sizeScale(3.0))
+        .style("pointer-events", "none");
+        
+      D3SVG.selectAll(".map-marker-text")
+        .data(internalMarkerData.filter(m => m.type === 'label' || !m.type))
+        .join("text")
+        .attr("class", "map-marker-text")
+        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0])
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] + sizeScale(1.0))
+        .attr("text-anchor", "middle")
+        .attr("font-size", `${sizeScale(3.5)}px`)
+        .attr("font-weight", "bold")
+        .attr("fill", "black")
+        .style("pointer-events", "none")
+        .text((value) => value.text);
+    }
+  }, [
+    isGettingInitialState,
+    floorplan,
+    digitisationZone,
+    currentRotation,
+    internalMarkerData,
+    currentSelectedMarker,
+    isMarkerMode,
+    isDeleteMode
+  ]);
   console.log(pathData, "path here");
   const updateNodeProperty = (property, value) => {
     const indexToUpdate = pathData.findIndex((item) => item.id === currentSelectedPathPoint);
@@ -649,6 +738,11 @@ console.log(largestIdObject,'largestIdObject');
   console.log(detailedSelectedPoint,'updated detailed');
   const activeNodeToShow = (hoveredNode && !isEditingCoords) ? hoveredNode : (currentSelectedPathPoint ? detailedSelectedPoint : null);
   const isSelectedNode = activeNodeToShow?.id === currentSelectedPathPoint;
+
+  const activeMarkerToShow = internalMarkerData.find(m => m.id === currentSelectedMarker);
+  const updateMarkerProperty = (property, value) => {
+    setInternalMarkerData(prev => prev.map(m => m.id === currentSelectedMarker ? { ...m, [property]: value } : m));
+  };
   return (
     <React.Fragment>
       <div className="overlay-tools-container">
@@ -663,11 +757,56 @@ console.log(largestIdObject,'largestIdObject');
           <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
             delete mode
           </button>
-
           <span>{isDeleteMode ? " delete mode active" : ""}</span>
+          <button onClick={() => { setIsMarkerMode(!isMarkerMode); setCurrentSelectedPathPoint(""); setCurrentSelectedMarker(null); setIsJoinMode(false); setIsDeleteMode(false); }}>
+            marker mode
+          </button>
+          <span>{isMarkerMode ? " marker mode active" : ""}</span>
         </div>
       </div>
-      {activeNodeToShow && (
+      {activeMarkerToShow && isMarkerMode && (
+          <div className="node">
+            <div className="node-header">
+              <span className="node-header-title">Marker Details</span>
+              <button
+                type="button"
+                className="node-edit-btn"
+                style={{ backgroundColor: "#ff4d4f" }}
+                onClick={() => {
+                  setInternalMarkerData(internalMarkerData.filter(m => m.id !== activeMarkerToShow.id));
+                  setCurrentSelectedMarker(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+            <div className="node-row">
+              <strong>ID:</strong>
+              <span>{activeMarkerToShow.id}</span>
+            </div>
+            <div className="node-form-group">
+              <div className="node-field">
+                <span className="node-field-label">Type</span>
+                <select value={activeMarkerToShow.type || "label"} onChange={(e) => updateMarkerProperty("type", e.target.value)}>
+                  <option value="label">Label</option>
+                  <option value="icon">Icon</option>
+                </select>
+              </div>
+              {activeMarkerToShow.type === "icon" ? (
+                <div className="node-field">
+                  <span className="node-field-label">Icon Name</span>
+                  <input type="text" value={activeMarkerToShow.iconType || ""} onChange={(e) => updateMarkerProperty("iconType", e.target.value)} placeholder="e.g. toilet, door, lift" />
+                </div>
+              ) : (
+                <div className="node-field">
+                  <span className="node-field-label">Label Text</span>
+                  <input type="text" value={activeMarkerToShow.text || ""} onChange={(e) => updateMarkerProperty("text", e.target.value)} placeholder="e.g. Bedroom" />
+                </div>
+              )}
+            </div>
+          </div>
+      )}
+      {activeNodeToShow && !isMarkerMode && (
           <div className="node">
             <div className="node-header">
               <span className="node-header-title">
