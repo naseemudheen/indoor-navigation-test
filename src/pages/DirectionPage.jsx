@@ -24,7 +24,7 @@ import { MdLocationPin, MdNorthWest } from "react-icons/md";
 import dijkstrajs from "dijkstrajs";
 // import { CollegePath,basementData,groundData } from "../data";
 import basementData from "../data/maps/basementData.json";
-import groundData from "../data/maps/groundData.json";
+import groundData from "../test.json";
 import firstData from "../data/maps/firstFloorData.json";
 import secondData from "../data/maps/secondFloorData.json";
 import cancerFirst from "../data/maps/cancer1Data.json";
@@ -96,21 +96,34 @@ import {
   BLabs,
   BPharmacy,
 } from "../data/icons/basement";
-import {
-  GDineArea,
-  GDoctor,
-  GDoors,
-  GFood,
-  GIcu,
-  GLifts,
-  GNurse,
-  GPharmacy,
-  GRamp,
-  GSecurity,
-  GStairs,
-  GToilet,
-  GWard,
-} from "../data/icons/groundFloor";
+// import {
+//   GDineArea,
+//   GDoctor,
+//   GDoors,
+//   GFood,
+//   GIcu,
+//   GLifts,
+//   GNurse,
+//   GPharmacy,
+//   GRamp,
+//   GSecurity,
+//   GStairs,
+//   GToilet,
+//   GWard,
+// } from "../data/icons/groundFloor";
+const GDineArea = [];
+const GDoctor = [];
+const GDoors = [];
+const GFood = [];
+const GIcu = [];
+const GLifts = [];
+const GNurse = [];
+const GPharmacy = [];
+const GRamp = [];
+const GSecurity = [];
+const GStairs = [];
+const GToilet = [];
+const GWard = [];
 import {
   FDoctors,
   FBlood,
@@ -377,12 +390,11 @@ const DirectionPage = () => {
         // });
         // setUnitsData([]);
         if (floor === 0) {
-          const parsedGround = parseUnifiedFloorData(unified_groundData, SVG_ICON_MAP);
-          setPathData(parsedGround.pathData);
-          setUnitsData(parsedGround.unitsData);
-          setIconData(parsedGround.iconData);
-          setLowLabels(parsedGround.lowLabels);
-          setHighLabels(parsedGround.labels);
+          setPathData(groundData);
+          setUnitsData([]);
+          setIconData([]);
+          setLowLabels([]);
+          setHighLabels([]);
         } else if (floor === 1) {
           setPathData(firstData);
           setUnitsData([]);
@@ -497,12 +509,11 @@ const DirectionPage = () => {
       setLowLabels(undergroundLabels);
       setHighLabels(Labels);
     } else if (type === 0) {
-      const parsedGround = parseUnifiedFloorData(unified_groundData, SVG_ICON_MAP);
-      setPathData(parsedGround.pathData);
-      setUnitsData(parsedGround.unitsData);
-      setIconData(parsedGround.iconData);
-      setLowLabels(parsedGround.lowLabels);
-      setHighLabels(parsedGround.labels);
+      setPathData(groundData);
+      setUnitsData([]);
+      setIconData([]);
+      setLowLabels([]);
+      setHighLabels([]);
       handleClick(0);
     } else if (type === 1) {
       setPathData(firstData);

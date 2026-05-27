@@ -31,7 +31,7 @@ const cancerOneLabels = [];
 const cancerTwoLabels = [];
 const cancerThreeLabels = [];
 import basementData from "../data/maps/basementData.json";
-import groundData from "../data/maps/groundData.json";
+import groundData from "../test.json";
 import firstData from "../data/maps/firstFloorData.json";
 import secondData from "../data/maps/secondFloorData.json";
 import { ChevronDown, ChevronUp } from "../components/Icons";
@@ -97,21 +97,34 @@ import {
   BLabs,
   BPharmacy,
 } from "../data/icons/basement";
-import {
-  GDineArea,
-  GDoctor,
-  GDoors,
-  GFood,
-  GIcu,
-  GLifts,
-  GNurse,
-  GPharmacy,
-  GRamp,
-  GSecurity,
-  GStairs,
-  GToilet,
-  GWard,
-} from "../data/icons/groundFloor";
+// import {
+//   GDineArea,
+//   GDoctor,
+//   GDoors,
+//   GFood,
+//   GIcu,
+//   GLifts,
+//   GNurse,
+//   GPharmacy,
+//   GRamp,
+//   GSecurity,
+//   GStairs,
+//   GToilet,
+//   GWard,
+// } from "../data/icons/groundFloor";
+const GDineArea = [];
+const GDoctor = [];
+const GDoors = [];
+const GFood = [];
+const GIcu = [];
+const GLifts = [];
+const GNurse = [];
+const GPharmacy = [];
+const GRamp = [];
+const GSecurity = [];
+const GStairs = [];
+const GToilet = [];
+const GWard = [];
 import {
   FDoctors,
   FBlood,
@@ -469,23 +482,9 @@ const NavigationPage = () => {
         // setUnitsData([]);
         if (floor === 0) {
           setPathData(groundData);
-          setUnitsData(GDoors);
-          setIconData([
-            { type: "door", data: GDoors, icon: door },
-            { type: "stair", data: GStairs, icon: stairIcon },
-            { type: "lift", data: GLifts, icon: LiftIcon },
-            { type: "doctor", data: GDoctor, icon: DoctorIcon },
-            { type: "nurse", data: GNurse, icon: NurseIcon },
-            { type: "toilet", data: GToilet, icon: ToiletIcon },
-            { type: "icu", data: GIcu, icon: IcuIcon },
-            { type: "ward", data: GWard, icon: wardIcon },
-            { type: "pharmacy", data: GPharmacy, icon: PharmacyIcon },
-            { type: "dineArea", data: GDineArea, icon: DineIcon },
-            { type: "food", data: GFood, icon: CanteenIcon },
-            { type: "security", data: GSecurity, icon: SecurityIcon },
-            { type: "ramp", data: GRamp, icon: RampIcon },
-          ]);
-          setLowLabels(newGround);
+          setUnitsData([]);
+          setIconData([]);
+          setLowLabels([]);
         } else if (floor === 1) {
           setPathData(firstData);
           setUnitsData([]);
@@ -594,18 +593,9 @@ const NavigationPage = () => {
       setLowLabels(undergroundLabels);
     } else if (type === 0) {
       setPathData(groundData);
-      setUnitsData(GDoors);
-      setIconData([
-        { type: "door", data: GDoors, icon: door },
-        { type: "stair", data: GStairs, icon: stairIcon },
-        { type: "lift", data: GLifts, icon: LiftIcon },
-        { type: "doctor", data: GDoctor, icon: DoctorIcon },
-        { type: "nurse", data: GNurse, icon: NurseIcon },
-        { type: "toilet", data: GToilet, icon: ToiletIcon },
-        { type: "icu", data: GIcu, icon: IcuIcon },
-        { type: "ramp", data: GRamp, icon: RampIcon },
-      ]);
-      setLowLabels(newGround);
+      setUnitsData([]);
+      setIconData([]);
+      setLowLabels([]);
       handleClick(0);
     } else if (type === 1) {
       setPathData(firstData);

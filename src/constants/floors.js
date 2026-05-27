@@ -1,5 +1,5 @@
 import basementData from "../data/maps/basementData.json";
-import groundData from "../data/maps/groundData.json";
+import groundData from "../test.json";
 import firstData from "../data/maps/firstFloorData.json";
 import secondData from "../data/maps/secondFloorData.json";
 import cancerFirst from "../data/maps/cancer1Data.json";

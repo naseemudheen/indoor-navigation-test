@@ -84,23 +84,38 @@ import {
   BPharmacy,
   BEntry,
 } from "../data/icons/basement";
-import {
-  GDineArea,
-  GDoctor,
-  GDoors,
-  GFood,
-  GIcu,
-  GLifts,
-  GNurse,
-  GPharmacy,
-  GStairs,
-  GToilet,
-  GWard,
-  GSecurity,
-  GEntry,
-  GCounter,
-  GRamp
-} from "../data/icons/groundFloor";
+// import {
+//   GDineArea,
+//   GDoctor,
+//   GDoors,
+//   GFood,
+//   GIcu,
+//   GLifts,
+//   GNurse,
+//   GPharmacy,
+//   GStairs,
+//   GToilet,
+//   GWard,
+//   GSecurity,
+//   GEntry,
+//   GCounter,
+//   GRamp
+// } from "../data/icons/groundFloor";
+const GDineArea = [];
+const GDoctor = [];
+const GDoors = [];
+const GFood = [];
+const GIcu = [];
+const GLifts = [];
+const GNurse = [];
+const GPharmacy = [];
+const GStairs = [];
+const GToilet = [];
+const GWard = [];
+const GSecurity = [];
+const GEntry = [];
+const GCounter = [];
+const GRamp = [];
 import {
   FDoctors,
   FBlood,
@@ -293,25 +308,9 @@ const HomePage = () => {
         // setUnitsData([]);
         if (floor === 0) {
           setPathData(groundData);
-          setUnitsData(GDoors);
-          setIconData([
-            { type: "door", data: GDoors, icon: door },
-            { type: "stair", data: GStairs, icon: stairIcon },
-            { type: "lift", data: GLifts, icon: LiftIcon },
-            { type: "doctor", data: GDoctor, icon: DoctorIcon },
-            { type: "nurse", data: GNurse, icon: NurseIcon },
-            { type: "toilet", data: GToilet, icon: ToiletIcon },
-            { type: "icu", data: GIcu, icon: IcuIcon },
-            { type: "ward", data: GWard, icon: wardIcon },
-            { type: "pharmacy", data: GPharmacy, icon: PharmacyIcon },
-            { type: "dineArea", data: GDineArea, icon: DineIcon },
-            { type: "food", data: GFood, icon: CanteenIcon },
-            { type: "security", data: GSecurity, icon: SecurityIcon },
-            { type: "entry", data: GEntry, icon: EntryIcon },
-            { type: "counter", data: GCounter, icon: CounterIcon },
-            { type: "ramp", data: GRamp, icon: RampIcon }
-          ]);
-          setLowLabels(newGround);
+          setUnitsData([]);
+          setIconData([]);
+          setLowLabels([]);
         } else if (floor === 1) {
           setPathData(firstData);
           setUnitsData([]);
@@ -422,25 +421,9 @@ const HomePage = () => {
       setLowLabels(undergroundLabels);
     } else if (type === 0) {
       setPathData(groundData);
-      setUnitsData(GDoors);
-      setIconData([
-        { type: "door", data: GDoors, icon: door },
-        { type: "stair", data: GStairs, icon: stairIcon },
-        { type: "lift", data: GLifts, icon: LiftIcon },
-        { type: "doctor", data: GDoctor, icon: DoctorIcon },
-        { type: "nurse", data: GNurse, icon: NurseIcon },
-        { type: "toilet", data: GToilet, icon: ToiletIcon },
-        { type: "icu", data: GIcu, icon: IcuIcon },
-        { type: "pharmacy", data: GPharmacy, icon: PharmacyIcon },
-        { type: "dineArea", data: GDineArea, icon: DineIcon },
-        { type: "food", data: GFood, icon: CanteenIcon },
-         { type: "ward", data: GWard, icon: wardIcon },
-        { type: "security", data: GSecurity, icon: SecurityIcon },
-        { type: "entry", data: GEntry, icon: EntryIcon },
-        { type: "counter", data: GCounter, icon: CounterIcon },
-        { type: "ramp", data: GRamp, icon: RampIcon }
-      ]);
-      setLowLabels(newGround);
+      setUnitsData([]);
+      setIconData([]);
+      setLowLabels([]);
       handleClick(0);
     } else if (type === 1) {
       setPathData(firstData);
