@@ -12,16 +12,24 @@ import Floorplan from "../components/Floorplan";
 import { getNaturalImageDimensions } from "../utils/helper";
 import { RxTriangleLeft, RxTriangleRight } from "react-icons/rx";
 import { ActionIcon } from "../components/Icons";
-import Labels from "../label.json";
-import {
-  newGround,
-  undergroundLabels,
-  firstLabels,
-  secondLabels,
-  cancerOneLabels,
-  cancerTwoLabels,
-  cancerThreeLabels,
-} from "../low-level-labels";
+// import Labels from "../label.json";
+// import {
+//   newGround,
+//   undergroundLabels,
+//   firstLabels,
+//   secondLabels,
+//   cancerOneLabels,
+//   cancerTwoLabels,
+//   cancerThreeLabels,
+// } from "../low-level-labels";
+const Labels = [];
+const newGround = [];
+const undergroundLabels = [];
+const firstLabels = [];
+const secondLabels = [];
+const cancerOneLabels = [];
+const cancerTwoLabels = [];
+const cancerThreeLabels = [];
 import basementData from "../data/maps/basementData.json";
 import groundData from "../data/maps/groundData.json";
 import firstData from "../data/maps/firstFloorData.json";
@@ -33,10 +41,15 @@ import { Link } from "react-router-dom";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "../utils";
 import { useDispatch, useSelector } from "react-redux";
 import { setFloor } from "../redux/mapSlice";
-import groundfloor from "../assets/floors/ground-floor.svg";
-import basementfloor from "../assets/floors/underground-floor.svg";
-import firstfloor from "../assets/floors/first-floor.svg";
-import secondfloor from "../assets/floors/second-floor.svg";
+import simpleFloor from "../assets/floors/simple.svg";
+// import groundfloor from "../assets/floors/ground-floor.svg";
+// import basementfloor from "../assets/floors/underground-floor.svg";
+// import firstfloor from "../assets/floors/first-floor.svg";
+// import secondfloor from "../assets/floors/second-floor.svg";
+const groundfloor = simpleFloor;
+const basementfloor = simpleFloor;
+const firstfloor = simpleFloor;
+const secondfloor = simpleFloor;
 import {
   Button,
   Dialog,
@@ -48,9 +61,12 @@ import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import FloorSwitcher from "../components/FloorSwitcher";
 import { mergedData, normalFloors } from "../constants/floors";
-import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
-import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
-import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
+// import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
+// import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
+// import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
+const CMFirstFloor = simpleFloor;
+const CMSecondFloor = simpleFloor;
+const CMThirdFloor = simpleFloor;
 import cancerFirst from "../data/maps/cancer1Data.json";
 import cancerSecond from "../data/maps/cancer2Data.json";
 import cancerThird from "../data/maps/cancer3Data.json";

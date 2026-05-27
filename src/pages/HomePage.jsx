@@ -3,38 +3,55 @@ import { FooterNav, Header } from "../container/Home";
 import { DirectIcon } from "../components/Icons";
 import { Link } from "react-router-dom";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import floor from "../assets/floors/ground-floor-alt.svg";
+// import floor from "../assets/floors/ground-floor-alt.svg";
 import DirectionFloor from "../components/DirectionFloor";
 import { useDispatch, useSelector } from "react-redux";
 import basementData from "../data/maps/basementData.json";
-import groundData from "../data/maps/groundData.json";
+import groundData from "../test.json";
 import firstData from "../data/maps/firstFloorData.json";
 import secondData from "../data/maps/secondFloorData.json";
 import cancerFirst from "../data/maps/cancer1Data.json";
 import cancerSecond from "../data/maps/cancer2Data.json";
 import cancerThird from "../data/maps/cancer3Data.json";
-import groundfloor from "../assets/floors/ground-floor.svg";
-import basementfloor from "../assets/floors/underground-floor.svg";
-import firstfloor from "../assets/floors/first-floor.svg";
-import secondfloor from "../assets/floors/second-floor.svg";
-import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
-import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
-import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
+import simpleFloor from "../assets/floors/simple.svg";
+// import groundfloor from "../assets/floors/ground-floor.svg";
+// import basementfloor from "../assets/floors/underground-floor.svg";
+// import firstfloor from "../assets/floors/first-floor.svg";
+// import secondfloor from "../assets/floors/second-floor.svg";
+// import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
+// import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
+// import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
+const floor = simpleFloor;
+const groundfloor = simpleFloor;
+const basementfloor = simpleFloor;
+const firstfloor = simpleFloor;
+const secondfloor = simpleFloor;
+const CMFirstFloor = simpleFloor;
+const CMSecondFloor = simpleFloor;
+const CMThirdFloor = simpleFloor;
 import { scaleLinear, zoomIdentity, zoom, merge, easeCircleInOut } from "d3";
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import { getNaturalImageDimensions } from "../utils/helper";
 import { setFloor } from "../redux/mapSlice";
-import {
-  newGround,
-  undergroundLabels,
-  firstLabels,
-  secondLabels,
-  cancerOneLabels,
-  cancerTwoLabels,
-  cancerThreeLabels,
-} from "../low-level-labels";
-import labels from "../label.json";
+// import {
+//   newGround,
+//   undergroundLabels,
+//   firstLabels,
+//   secondLabels,
+//   cancerOneLabels,
+//   cancerTwoLabels,
+//   cancerThreeLabels,
+// } from "../low-level-labels";
+// import labels from "../label.json";
+const newGround = [];
+const undergroundLabels = [];
+const firstLabels = [];
+const secondLabels = [];
+const cancerOneLabels = [];
+const cancerTwoLabels = [];
+const cancerThreeLabels = [];
+const labels = [];
 import { EntryExit } from "../utils/rooms/ground";
 import FloorSwitcher from "../components/FloorSwitcher";
 import door from "../assets/icons/door.svg";
@@ -168,9 +185,9 @@ const HomePage = () => {
   ];
   const mergedData = [
     ...groundData,
-    ...basementData,
-    ...firstData,
-    ...secondData,
+    // ...basementData,
+    // ...firstData,
+    // ...secondData,
   ];
   const [activeIndex, setActiveIndex] = useState(0);
   const handleFloorChange = useCallback((floor) => {

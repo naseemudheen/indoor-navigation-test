@@ -818,6 +818,7 @@ export default function Floorplan({
           zoomToUnit(data.id, currentRotation);
           // zoomToUnitAndDetectNearby(data.id);c change now
         });
+      /*
       const baseSize = 20;
       const scaledSize = trans?.k > 3 ? baseSize / trans?.k : 10;
       D3SVG.selectAll(".text-units")
@@ -853,6 +854,7 @@ export default function Floorplan({
           // Counter-rotate text so it stays readable against map rotation
           return `translate(${coordinates[0]},${coordinates[1]}) rotate(${currentRotation})`;
         });
+      */
 
       [
         { direction: "top", renderTimerFunc: renderTimerTop },
@@ -920,6 +922,7 @@ export default function Floorplan({
           .attr("class", `units-timer-${item.direction}`);
       });
 
+      /*
       //labels
       const baseSize2 = 5;
       const scaledSize2 = 5; // Always show high-level labels
@@ -956,7 +959,9 @@ export default function Floorplan({
           // Counter-rotate label so it stays readable
           return `translate(${coordinates[0]},${coordinates[1]}) rotate(${currentRotation})`;
         });
+      */
 
+      /*
       const scaledSize3 = trans?.k > 8 ? (trans?.k > 15 ? baseSize / trans?.k : 1.5) : 0;
       D3SVG.selectAll(".low-label-units")
         .data(lowLabels)
@@ -991,6 +996,7 @@ export default function Floorplan({
           // Counter-rotate label so it stays readable
           return `translate(${coordinates[0]},${coordinates[1]}) rotate(${currentRotation})`;
         });
+      */
       ///room icons
 
       // const svgWidth = 9;
@@ -1079,6 +1085,7 @@ export default function Floorplan({
 
     const iconTypes = icons;
 
+    /*
     iconTypes.forEach((iconType) => {
       createIconUnits(
         D3SVG,
@@ -1090,6 +1097,7 @@ export default function Floorplan({
         zoomToUnit,
       );
     });
+    */
 
     // ... rest of your setup code
   }, [unitsData, digitisationZone, currentRotation, zoomToUnit]);

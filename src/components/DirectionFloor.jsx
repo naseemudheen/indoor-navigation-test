@@ -507,7 +507,7 @@ const DirectionFloor = ({
         .on("click", (ev, data) => {
           zoomToUnit(data.id);
         });
-      // console.log(trans?.k);
+      /*
       const baseSize = 30;
       const scaledSize = trans?.k > 3 ? baseSize / trans?.k : 10;
       D3SVG.selectAll(".text-units")
@@ -541,6 +541,7 @@ const DirectionFloor = ({
         //   zoomToUnit(data.id);
         // })
         .text((value) => value.text);
+      */
 
       [
         { direction: "top", renderTimerFunc: renderTimerTop },
@@ -608,6 +609,7 @@ const DirectionFloor = ({
           .attr("class", `units-timer-${item.direction}`);
       });
 
+      /*
       //labels
       const baseSize2 = 5;
       const scaledSize2 = 5;
@@ -642,7 +644,9 @@ const DirectionFloor = ({
         //   zoomToUnit(data.id);
         // })
         .text((value) => value.name);
+      */
 
+      /*
       const scaledSize3 = trans?.k > 15 ? baseSize / trans?.k : 2;
       D3SVG.selectAll(".low-label-units")
         .data(lowLabels)
@@ -675,6 +679,7 @@ const DirectionFloor = ({
         //   zoomToUnit(data.id);
         // })
         .text((value) => value.name);
+      */
 
       ///room icons
 
@@ -701,6 +706,7 @@ const DirectionFloor = ({
 
     const iconTypes = icons;
 
+    /*
     iconTypes?.forEach((iconType) => {
       createIconUnits(
         D3SVG,
@@ -712,6 +718,7 @@ const DirectionFloor = ({
         zoomToUnit,
       );
     });
+    */
 
     // ... rest of your setup code
   }, [

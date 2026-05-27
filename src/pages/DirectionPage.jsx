@@ -4,13 +4,21 @@ import StartingSection from "../container/Destination/StartingSection";
 import { useLocation } from "react-router-dom";
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
-import groundfloor from "../assets/floors/ground-floor.svg";
-import basementfloor from "../assets/floors/underground-floor.svg";
-import firstfloor from "../assets/floors/first-floor.svg";
-import secondfloor from "../assets/floors/second-floor.svg";
-import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
-import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
-import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
+import simpleFloor from "../assets/floors/simple.svg";
+// import groundfloor from "../assets/floors/ground-floor.svg";
+// import basementfloor from "../assets/floors/underground-floor.svg";
+// import firstfloor from "../assets/floors/first-floor.svg";
+// import secondfloor from "../assets/floors/second-floor.svg";
+// import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
+// import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
+// import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
+const groundfloor = simpleFloor;
+const basementfloor = simpleFloor;
+const firstfloor = simpleFloor;
+const secondfloor = simpleFloor;
+const CMFirstFloor = simpleFloor;
+const CMSecondFloor = simpleFloor;
+const CMThirdFloor = simpleFloor;
 import { scaleLinear, zoomIdentity, zoom, easeCircleInOut } from "d3";
 import { MdLocationPin, MdNorthWest } from "react-icons/md";
 import dijkstrajs from "dijkstrajs";
@@ -23,7 +31,8 @@ import cancerFirst from "../data/maps/cancer1Data.json";
 import cancerSecond from "../data/maps/cancer2Data.json";
 import cancerThird from "../data/maps/cancer3Data.json";
 // import basementData from '../basement.json'
-import Labels from "../label.json";
+// import Labels from "../label.json";
+const Labels = [];
 import { useDispatch, useSelector } from "react-redux";
 import {
   setFinalPath,
@@ -34,15 +43,22 @@ import {
 } from "../redux/mapSlice";
 import { getNaturalImageDimensions } from "../utils/helper";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "../utils";
-import {
-  newGround,
-  undergroundLabels,
-  firstLabels,
-  secondLabels,
-  cancerOneLabels,
-  cancerTwoLabels,
-  cancerThreeLabels,
-} from "../low-level-labels";
+// import {
+//   newGround,
+//   undergroundLabels,
+//   firstLabels,
+//   secondLabels,
+//   cancerOneLabels,
+//   cancerTwoLabels,
+//   cancerThreeLabels,
+// } from "../low-level-labels";
+const newGround = [];
+const undergroundLabels = [];
+const firstLabels = [];
+const secondLabels = [];
+const cancerOneLabels = [];
+const cancerTwoLabels = [];
+const cancerThreeLabels = [];
 import DirectionFloor from "../components/DirectionFloor";
 import unified_groundData from "../data/maps/unified_groundData.json";
 import { parseUnifiedFloorData } from "../utils/mapAdapter";

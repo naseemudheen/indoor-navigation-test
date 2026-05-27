@@ -32,7 +32,7 @@ const FloorSwitcher = memo(
             prevEl: ".floor-prev",
           }}
         >
-          <SwiperSlide>
+          {/* <SwiperSlide>
             <div
               className={`${
                 activeIndex === -1 && "bg-[#29AB87]"
@@ -47,7 +47,7 @@ const FloorSwitcher = memo(
                 B
               </p>
             </div>
-          </SwiperSlide>
+          </SwiperSlide> */}
           <SwiperSlide>
             <div
               className={`${
@@ -64,7 +64,7 @@ const FloorSwitcher = memo(
               </p>
             </div>
           </SwiperSlide>
-          <SwiperSlide>
+          {/* <SwiperSlide>
             <div
               className={`${
                 activeIndex === 1 && "bg-[#29AB87]"
@@ -143,7 +143,7 @@ const FloorSwitcher = memo(
                 C3
               </p>
             </div>
-          </SwiperSlide>
+          </SwiperSlide> */}
         </Swiper>
 
         {/* <hr className=" w-full bg-[#00000033]" /> */}
