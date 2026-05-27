@@ -29,11 +29,8 @@ export default function Floorplan({
   const [isJoinMode, setIsJoinMode] = React.useState(false);
   const [isNameClicked, setIsNameClicked] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = React.useState(false);
-  const [isMessage, setIsMessage] = useState(false);
   const [undoStack, setUndoStack] = React.useState([]);
   const [redoStack, setRedoStack] = React.useState([]);
-  const [message, setMessage] = useState();
-  const [prevMessage, setPrevMessage] = useState();
   const translationRef = React.useRef([0, 0]);
   const scaleRef = React.useRef(1);
   const idCounter = React.useRef(0);
@@ -138,6 +135,17 @@ export default function Floorplan({
             return item.id === currentSelectedPathPoint;
           });
           console.log(currentSelectedPathData);
+
+          if (!currentSelectedPathData) {
+            const pathPointObj = {
+              id: `path-${idCounter.current}`,
+              coordinates: scaledCoordinates,
+              neighbors: [],
+            };
+            setDetailedSelectedPoint(pathPointObj);
+            return [...currentPathData, pathPointObj];
+          }
+
           const pathPointObj = {
             id: `path-${idCounter.current}`,
             coordinates: scaledCoordinates,
@@ -534,135 +542,81 @@ export default function Floorplan({
     pathData,
     currentSelectedPathPoint,
   ]);
-  function addname(e) {
-    const indexToUpdate = pathData.findIndex(
-      (item) => item.id === currentSelectedPathPoint
-    );
+  const updateNodeProperty = (property, value) => {
+    const indexToUpdate = pathData.findIndex((item) => item.id === currentSelectedPathPoint);
     if (indexToUpdate !== -1) {
-      setTimeout(() => {
-        setPathData((prevArray) => {
-          const newArray = [...prevArray];
-          newArray[indexToUpdate] = {
-            ...detailedSelectedPoint,
-
-            name: e.target.value,
-          };
-          return newArray;
-        });
-        setIsNameClicked(false);
-      }, 3000);
+      setPathData((prevArray) => {
+        const newArray = [...prevArray];
+        newArray[indexToUpdate] = { ...newArray[indexToUpdate], [property]: value };
+        return newArray;
+      });
+      setDetailedSelectedPoint((prev) => ({ ...prev, [property]: value }));
     }
-  }
+  };
 
-  function addMessage() {
-    const indexToUpdate = pathData.findIndex(
-      (item) => item.id === currentSelectedPathPoint
-    );
-
-    setPathData((prevArray) => {
-      const newArray = [...prevArray];
-      // setPrevMessage(newArray[indexToUpdate].messages)
-      console.log(prevMessage, "prevmesg");
-      newArray[indexToUpdate] = {
-        ...detailedSelectedPoint,
-        messages: {
-          ...newArray[indexToUpdate].messages,
-          ...message,
-        },
-      };
-      return newArray;
-    });
-    setMessage(null);
-  }
   console.log(pathData);
   console.log(detailedSelectedPoint);
-  console.log(message);
   return (
     <React.Fragment>
-      <div className="path-save-cancel-button-container">
-        <button onClick={togglePathCreation}>cancel</button>
-        <button onClick={savePath}>save</button>
-        <button onClick={() => setIsJoinMode(!isJoinMode)}>join mode</button>
-        <button onClick={undo}>Undo</button>
-        <button onClick={redo}>Redo</button>
-        <span>{isJoinMode ? " join mode active" : ""}</span>
-        <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
-          delete mode
-        </button>
-        <button onClick={() => setIsNameClicked(!isNameClicked)}>
-          Add Name
-        </button>
-        {isNameClicked && <input type="text" onChange={addname} />}
-        <span>{isDeleteMode ? " delete mode active" : ""}</span>
+      <div className="overlay-tools-container">
+        <h4>Create Path Mode Active</h4>
+        <div className="path-save-cancel-button-container">
+          <button onClick={togglePathCreation}>cancel</button>
+          <button onClick={savePath}>save</button>
+          <button onClick={() => setIsJoinMode(!isJoinMode)}>join mode</button>
+          <button onClick={undo}>Undo</button>
+          <button onClick={redo}>Redo</button>
+          <span>{isJoinMode ? " join mode active" : ""}</span>
+          <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
+            delete mode
+          </button>
+
+          <span>{isDeleteMode ? " delete mode active" : ""}</span>
+        </div>
       </div>
       <div id="path-floorplan-container">
         {currentSelectedPathPoint?.length !== 0 && (
-          <div className="node">
-            {detailedSelectedPoint.id}
+          <div className="node" style={{ padding: "10px", background: "#f9f9f9", border: "1px solid #ccc", marginTop: "10px" }}>
+            <strong>ID:</strong> {detailedSelectedPoint.id}
             <br />
-            coordinates:{detailedSelectedPoint?.coordinates?.join(",")}
+            <strong>Coordinates:</strong> {detailedSelectedPoint?.coordinates?.map(c => c.toFixed(4)).join(", ")}
             <br />
-            name:
-            {detailedSelectedPoint.name ? (
-              <p>{detailedSelectedPoint.name}</p>
-            ) : (
-              <input type="text" onChange={addname} />
-            )}
+            <label>
+              <strong>Name:</strong>{" "}
+              <input 
+                type="text" 
+                value={detailedSelectedPoint.name || ""} 
+                onChange={(e) => updateNodeProperty("name", e.target.value)} 
+              />
+            </label>
             <br />
-            neighbors:
+            <label>
+              <strong>Floor:</strong>{" "}
+              <input 
+                type="number" 
+                value={detailedSelectedPoint.floor !== undefined ? detailedSelectedPoint.floor : ""} 
+                onChange={(e) => updateNodeProperty("floor", e.target.value === "" ? "" : parseInt(e.target.value, 10))} 
+              />
+            </label>
+            <br />
+            <label>
+              <strong>Searchable:</strong>{" "}
+              <input 
+                type="checkbox" 
+                checked={detailedSelectedPoint.isSearchable || false} 
+                onChange={(e) => updateNodeProperty("isSearchable", e.target.checked)} 
+              />
+            </label>
+            <br />
+            <strong>Neighbors:</strong>
             {detailedSelectedPoint?.neighbors?.map((item) => {
               console.log(item.id);
-              console.log(
-                pathData[
-                  pathData.findIndex(
-                    (item1) => item1.id === currentSelectedPathPoint
-                  )
-                ]?.messages?.[item && item.id]
-              );
               return (
-                <div>
+                <div key={item.id}>
                   <p style={{ margin: 0 }}>{item?.id}</p>
-                  <button onClick={() => setIsMessage(true)}>
-                    Add Message
-                  </button>
-                  {isMessage && (
-                    <input
-                      type="text"
-                      name={item?.id}
-                      defaultValue={
-                        pathData[
-                          pathData.findIndex(
-                            (item1) => item1.id === currentSelectedPathPoint
-                          )
-                        ]?.messages?.[item && item.id]
-                      }
-                      onChange={(e) =>
-                        setMessage({
-                          ...message,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                    />
-                  )}
-                  {pathData[
-                    pathData.findIndex(
-                      (item1) => item1.id === currentSelectedPathPoint
-                    )
-                  ]?.messages?.[item && item.id] && (
-                    <span style={{ fontWeight: 700 }}>
-                      {
-                        pathData[
-                          pathData.findIndex(
-                            (item1) => item1.id === currentSelectedPathPoint
-                          )
-                        ]?.messages?.[item && item.id]
-                      }
-                    </span>
-                  )}
                 </div>
               );
             })}
-            {isMessage && <button onClick={addMessage}>Submit</button>}
           </div>
         )}
       </div>

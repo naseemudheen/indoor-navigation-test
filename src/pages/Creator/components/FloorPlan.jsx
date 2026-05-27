@@ -771,20 +771,39 @@ console.log(trans,4534);
       .attr("d", pathString);
   }
   return(
-        <div id="floorplan-container">
-      <button onClick={()=>{
-         setCurrentIndex((prev)=> prev+1)
-         setTrans( prev => {
-          return {
-          ...prev,
-          x: prev?.x - 100,
-          y: prev?.y,
-          k: prev?.k
-          }
-         })
-         updateLine();
-      }}>next</button>
-    </div>
+         <div id="floorplan-container">
+       <button 
+         style={{
+           position: "absolute",
+           top: "16px",
+           left: "16px",
+           zIndex: 10,
+           padding: "8px 12px",
+           backgroundColor: "#ffffff",
+           border: "1px solid #cbd5e1",
+           borderRadius: "6px",
+           color: "#334155",
+           fontSize: "0.85rem",
+           fontWeight: "500",
+           cursor: "pointer",
+           boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+         }}
+         onClick={()=>{
+            setCurrentIndex((prev)=> prev+1)
+            setTrans( prev => {
+             return {
+             ...prev,
+             x: prev?.x - 100,
+             y: prev?.y,
+             k: prev?.k
+             }
+            })
+            updateLine();
+         }}
+       >
+         next
+       </button>
+     </div>
     )
     
 }

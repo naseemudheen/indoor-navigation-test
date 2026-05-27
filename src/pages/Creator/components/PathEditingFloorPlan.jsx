@@ -18,7 +18,7 @@ export default function Floorplan({
   floorplan,
   digitisationZone,
   currentRotation,
-  togglePathCreation,
+  togglePathEditing,
   setPath,
   pathinfo
 }) {
@@ -28,9 +28,6 @@ export default function Floorplan({
     const [detailedSelectedPoint,setDetailedSelectedPoint] = useState({})
   const [isJoinMode, setIsJoinMode] = React.useState(false);
   const [isNameClicked,setIsNameClicked] = useState(false)
-  const [message, setMessage] = useState();
-  const [prevMessage,setPrevMessage] = useState()
-  const [isMessage,setIsMessage] = useState(false)
   const [isDeleteMode, setIsDeleteMode] = React.useState(false);
   const [undoStack,setUndoStack] = React.useState([])
   const [redoStack, setRedoStack] = React.useState([]);
@@ -58,7 +55,7 @@ console.log(largestIdObject,'largestIdObject');
   function savePath() {
     if (pathData.length <= 0) return;
     setPath(pathData);
-    togglePathCreation();
+    togglePathEditing();
   }
   function undo() {
     if (undoStack.length > 0) {
@@ -159,6 +156,16 @@ console.log(largestIdObject,'largestIdObject');
               return item.id === currentSelectedPathPoint
             } 
           );
+
+          if (!currentSelectedPathData) {
+            const pathPointObj = {
+              id: `path-${idCounter.current}`,
+              coordinates: scaledCoordinates,
+              neighbors: [],
+            };
+            setDetailedSelectedPoint(pathPointObj);
+            return [...currentPathData, pathPointObj];
+          }
 
           const pathPointObj = {
             id: `path-${idCounter.current}`,
@@ -305,7 +312,7 @@ console.log(largestIdObject,'largestIdObject');
       .attr("fill", "blue")
       .attr("cx", (value) => {
         const currentPathData = pathData.find((item) => item.id === value);
-
+        if (!currentPathData) return 0;
         return getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
           currentRotation,
@@ -315,7 +322,7 @@ console.log(largestIdObject,'largestIdObject');
       })
       .attr("cy", (value) => {
         const currentPathData = pathData.find((item) => item.id === value);
-
+        if (!currentPathData) return 0;
         return getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
           currentRotation,
@@ -391,11 +398,20 @@ console.log(largestIdObject,'largestIdObject');
             .filter((item) => item.id !== currentClickedPathData.id);
 
           setPathData(newPathData);
+          if (currentSelectedPathPoint === currentClickedPathData.id) {
+            setCurrentSelectedPathPoint("");
+            setDetailedSelectedPoint({});
+          }
           return;
         }
 
         if (isJoinMode) {
           const currentClickedPathData = data;
+
+          if (!currentSelectedPathPoint) {
+            console.warn("No path selected to join with");
+            return;
+          }
 
           if (
             currentClickedPathData.neighbors.find(
@@ -561,102 +577,78 @@ console.log(largestIdObject,'largestIdObject');
     currentSelectedPathPoint,
   ]);
   console.log(pathData, "path here");
-  function addname(e){
-    const indexToUpdate = pathData.findIndex(item => item.id === currentSelectedPathPoint);
+  const updateNodeProperty = (property, value) => {
+    const indexToUpdate = pathData.findIndex((item) => item.id === currentSelectedPathPoint);
     if (indexToUpdate !== -1) {
-      // Update the object
-      setTimeout(() => {
-        setPathData(prevArray => {
-          const newArray = [...prevArray]; // Create a copy of the array
-          newArray[indexToUpdate] = { ...detailedSelectedPoint, name: e.target.value }; // Update the object
-          return newArray; // Return the updated array
-        });
-        setIsNameClicked(false)
-      }, 2000);
+      setPathData((prevArray) => {
+        const newArray = [...prevArray];
+        newArray[indexToUpdate] = { ...newArray[indexToUpdate], [property]: value };
+        return newArray;
+      });
+      setDetailedSelectedPoint((prev) => ({ ...prev, [property]: value }));
     }
-  }
+  };
 
-  function addMessage() {
-    const indexToUpdate = pathData.findIndex(
-      (item) => item.id === currentSelectedPathPoint
-    );
-
-    setPathData((prevArray) => {
-      const newArray = [...prevArray];
-      // setPrevMessage(newArray[indexToUpdate].messages)
-      console.log(prevMessage,'prevmesg');
-      newArray[indexToUpdate] = {
-        ...detailedSelectedPoint,
-        messages: {
-          ...newArray[indexToUpdate].messages,
-          ...message
-        },
-      };
-      return newArray;
-    });
-    setMessage(null)
-  }
   console.log(detailedSelectedPoint,'updated detailed');
   return (
     <React.Fragment>
-      <div className="path-save-cancel-button-container">
-        <button onClick={togglePathCreation}>cancel</button>
-        <button onClick={savePath}>save</button>
-        <button onClick={() => setIsJoinMode(!isJoinMode)}>join mode</button>
-        <button onClick={undo}>Undo</button>
-        <button onClick={redo}>Redo</button>
-        <span>{isJoinMode ? " join mode active" : ""}</span>
-        <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
-          delete mode
-        </button>
-        <button onClick={()=> setIsNameClicked(!isNameClicked)}>Add Name</button>
-        {
-          isNameClicked && (
-            <input type="text" onChange={addname} />
-          )
-        }  
-        <span>{isDeleteMode ? " delete mode active" : ""}</span>
+      <div className="overlay-tools-container">
+        <h4>Edit Path Mode Active</h4>
+        <div className="path-save-cancel-button-container">
+          <button onClick={togglePathEditing}>cancel</button>
+          <button onClick={savePath}>save</button>
+          <button onClick={() => setIsJoinMode(!isJoinMode)}>join mode</button>
+          <button onClick={undo}>Undo</button>
+          <button onClick={redo}>Redo</button>
+          <span>{isJoinMode ? " join mode active" : ""}</span>
+          <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
+            delete mode
+          </button>
+
+          <span>{isDeleteMode ? " delete mode active" : ""}</span>
+        </div>
       </div>
       {currentSelectedPathPoint?.length !== 0 && (
-          <div className="node2">
-            {detailedSelectedPoint.id}
+          <div className="node" style={{ padding: "10px", background: "#f9f9f9", border: "1px solid #ccc", marginTop: "10px" }}>
+            <strong>ID:</strong> {detailedSelectedPoint.id}
             <br />
-            coordinates:{detailedSelectedPoint?.coordinates?.join(",")}
+            <strong>Coordinates:</strong> {detailedSelectedPoint?.coordinates?.map(c => c.toFixed(4)).join(", ")}
             <br />
-            name:{detailedSelectedPoint.name?(
-                 <p>{detailedSelectedPoint.name}</p>
-              
-            ):(
-          
-              <input type="text" onChange={addname} />
-            )}
+            <label>
+              <strong>Name:</strong>{" "}
+              <input 
+                type="text" 
+                value={detailedSelectedPoint.name || ""} 
+                onChange={(e) => updateNodeProperty("name", e.target.value)} 
+              />
+            </label>
             <br />
-            neighbors:
-            {detailedSelectedPoint?.neighbors?.map((item) =>{
-              console.log(item.id);
-              console.log(pathData[pathData.findIndex((item1)=>item1.id === currentSelectedPathPoint)]?.messages?.[item && item.id]); 
+            <label>
+              <strong>Floor:</strong>{" "}
+              <input 
+                type="number" 
+                value={detailedSelectedPoint.floor !== undefined ? detailedSelectedPoint.floor : ""} 
+                onChange={(e) => updateNodeProperty("floor", e.target.value === "" ? "" : parseInt(e.target.value, 10))} 
+              />
+            </label>
+            <br />
+            <label>
+              <strong>Searchable:</strong>{" "}
+              <input 
+                type="checkbox" 
+                checked={detailedSelectedPoint.isSearchable || false} 
+                onChange={(e) => updateNodeProperty("isSearchable", e.target.checked)} 
+              />
+            </label>
+            <br />
+            <strong>Neighbors:</strong>
+            {detailedSelectedPoint?.neighbors?.map((item, index) =>{
               return  (
-                <div>
+                <div key={index}>
                 <p style={{ margin: 0 }}>{item?.id}</p>
-                <button onClick={()=>setIsMessage(true)}>Add Message</button>
-                {
-                  isMessage && (
-                      <input type="text" name={item?.id} defaultValue={pathData[pathData.findIndex((item1)=>item1.id === currentSelectedPathPoint)]?.messages?.[item && item.id]} onChange={(e)=>setMessage({...message,[e.target.name]:e.target.value})} />
-                  )
-                }
-                {
-                  pathData[pathData.findIndex((item1)=>item1.id === currentSelectedPathPoint)]?.messages?.[item && item.id] && (
-                    <span style={{fontWeight:700}}>{pathData[pathData.findIndex((item1)=>item1.id === currentSelectedPathPoint)]?.messages?.[item && item.id]}</span>
-                  )
-                }
                 </div>
               )
             })}
-             {
-                isMessage && (
-                  <button onClick={addMessage}>Submit</button>
-                )
-              }
           </div>
         )}
       <div id="path-floorplan-container"></div>

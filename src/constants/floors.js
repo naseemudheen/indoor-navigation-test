@@ -1,10 +1,4 @@
-import basementData from "../data/maps/basementData.json";
-import groundData from "../test.json";
-import firstData from "../data/maps/firstFloorData.json";
-import secondData from "../data/maps/secondFloorData.json";
-import cancerFirst from "../data/maps/cancer1Data.json";
-import cancerSecond from "../data/maps/cancer2Data.json";
-import cancerThird from "../data/maps/cancer3Data.json";
+import groundData from "../data/maps/groundfloor_data.json";
 
 export const floors = [0];
 export const normalFloors = [0];

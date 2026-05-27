@@ -13,10 +13,10 @@ import {
   CreatorPage,
 } from "./pages";
 import store from "./redux/store";
-import pathData from "./test.json";
+import pathData from "./data/maps/groundfloor_data.json";
 
 /**
- * Current Floor Plan Data Structure (e.g., "./test.json" or maps under "src/data/maps/"):
+ * Current Floor Plan Data Structure (e.g., "./data/maps/groundfloor_data.json" or maps under "src/data/maps/"):
  * 
  * The floor plan is represented as an array of path/node objects forming a navigable graph:
  * [

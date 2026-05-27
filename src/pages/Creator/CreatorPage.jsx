@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./Creator.css";
 import { scaleLinear, zoomIdentity,zoom, easeCircleInOut } from "d3";
 import dijkstrajs from "dijkstrajs";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import simpleFloor from "../../assets/floors/simple.svg";
 // import FloorplanImage from "./assets/ground-md.svg";
@@ -29,7 +30,7 @@ import Floorplan from "./components/FloorPlan";
 import PathCreationFloorplan from "./components/PathCreationFloorPlan";
 import PathEditingFloorplan from "./components/PathEditingFloorPlan";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "./utils";
-import groundData2 from '../../test.json'
+import groundData2 from '../../data/maps/groundfloor_data.json'
 // import basmentData from '../../data/maps/basementData.json'
 // import secondData from '../../data/maps/secondFloorData.json'
 // import firstData from '../../data/maps/firstFloorData.json'
@@ -118,6 +119,7 @@ function getTimerPosition(indexNumber) {
 }
 
 export default function App() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isGettingInitialState, setIsGettingInitalState] = React.useState(true);
   const [selectedNearbyDistance, setSelectedNearbyDistance] = React.useState(
     10
@@ -158,6 +160,25 @@ export default function App() {
   const [isCreatingFocusView, setIsCreatingFocusView] = React.useState(false);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
   const [pathData, setPathData] = React.useState(groundData2);
+  const savePathToDisk = async (newData) => {
+    setPathData(newData);
+    try {
+      const response = await fetch("/api/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newData),
+      });
+      if (response.ok) {
+        console.log("Successfully saved map path data to src/data/maps/groundfloor_data.json");
+      } else {
+        console.error("Failed to save map path data to src/data/maps/groundfloor_data.json");
+      }
+    } catch (error) {
+      console.error("Error saving map path data to src/data/maps/groundfloor_data.json:", error);
+    }
+  };
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
   const [isEditingPath,setIsEditingPath]=useState(false)
   const [selectedStartPath, setSelectedStartPath] = React.useState("");
@@ -583,7 +604,7 @@ export default function App() {
 
   return (
     <div className="creator-layout">
-      <div className="creator-sidebar">
+      <div className={`creator-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}>
         <h2 className="creator-title">Paadha Creator</h2>
         
         <div className="sidebar-section">
@@ -663,45 +684,45 @@ export default function App() {
         </div>
       </div>
 
+      <button
+        className={`sidebar-toggle-btn ${isSidebarCollapsed ? "collapsed" : ""}`}
+        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+      >
+        {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+      </button>
+
       <div className="creator-main">
         <div className="floorplan-container">
-          <Floorplan
-            isGettingInitialState={isGettingInitialState}
-            svgElementRef={svgElementRef}
-            svgZoomRef={svgZoomRef}
-            floorplan={floorplan}
-            digitisationZone={digitisationZone}
-            currentRotation={currentRotation}
-            unitsData={unitsData}
-            focusViews={focusViews}
-            resetSelectedFocusView={() => setSelectedFocusView(null)}
-            resetSelectedUnits={resetSelectedUnits}
-            selectedUnits={selectedUnits}
-            pathData={pathData}
-            selectedStartPath={selectedStartPath}
-            selectedEndPath={selectedEndPath}
-            selectedPath={selectedPath}
-            zoomToUnit={zoomToUnitAndDetectNearby}
-          />
-        </div>
-        
-        {isCreatingPath && (
-          <div className="overlay-tools-container">
-            <h4>Create Path Mode Active</h4>
+          {!isCreatingPath && !isEditingPath ? (
+            <Floorplan
+              isGettingInitialState={isGettingInitialState}
+              svgElementRef={svgElementRef}
+              svgZoomRef={svgZoomRef}
+              floorplan={floorplan}
+              digitisationZone={digitisationZone}
+              currentRotation={currentRotation}
+              unitsData={unitsData}
+              focusViews={focusViews}
+              resetSelectedFocusView={() => setSelectedFocusView(null)}
+              resetSelectedUnits={resetSelectedUnits}
+              selectedUnits={selectedUnits}
+              pathData={pathData}
+              selectedStartPath={selectedStartPath}
+              selectedEndPath={selectedEndPath}
+              selectedPath={selectedPath}
+              zoomToUnit={zoomToUnitAndDetectNearby}
+            />
+          ) : isCreatingPath ? (
             <PathCreationFloorplan
               isGettingInitialState={isGettingInitialState}
               floorplan={floorplan}
               digitisationZone={digitisationZone}
               currentRotation={currentRotation}
               togglePathCreation={togglePathCreation}
-              setPath={(data) => setPathData(data)}
+              setPath={(data) => savePathToDisk(data)}
             />
-          </div>
-        )}
-
-        {isEditingPath && (
-          <div className="overlay-tools-container">
-            <h4>Edit Path Mode Active</h4>
+          ) : (
             <PathEditingFloorplan
               isGettingInitialState={isGettingInitialState}
               floorplan={floorplan}
@@ -709,10 +730,10 @@ export default function App() {
               currentRotation={currentRotation}
               togglePathEditing={togglePathEditing}
               pathinfo={pathData}
-              setPath={(data) => setPathData(data)}
+              setPath={(data) => savePathToDisk(data)}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
