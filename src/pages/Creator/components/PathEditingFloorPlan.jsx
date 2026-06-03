@@ -42,14 +42,13 @@ export default function Floorplan({
   const [redoStack, setRedoStack] = React.useState([]);
   const translationRef = React.useRef([0, 0]);
   const scaleRef = React.useRef(1);
-  const idCounter = React.useRef(841);
-  function findObjectWithLargestId(pathData) {
-    if (!pathData || pathData.length === 0) return null;
+  function findObjectWithLargestId(data) {
+    if (!data || data.length === 0) return null;
   
-    let largestIdObject = pathData[0];
+    let largestIdObject = data[0];
     let largestIdNumber = parseInt(largestIdObject.id.split('-')[1], 10);
   
-    pathData.forEach((item) => {
+    data.forEach((item) => {
       const currentIdNumber = parseInt(item.id.split('-')[1], 10);
       if (currentIdNumber > largestIdNumber) {
         largestIdNumber = currentIdNumber;
@@ -59,8 +58,22 @@ export default function Floorplan({
   
     return largestIdObject;
   }
-  const largestIdObject = findObjectWithLargestId(pathData);
-console.log(largestIdObject,'largestIdObject');
+
+  const idCounter = React.useRef(
+    (() => {
+      const largestIdObj = findObjectWithLargestId(pathinfo);
+      if (largestIdObj) {
+        const largestIdNumber = parseInt(largestIdObj.id.split('-')[1], 10);
+        return largestIdNumber + 1 > 841 ? largestIdNumber + 1 : 841;
+      }
+      return 841;
+    })()
+  );
+
+  const generateNewNodeId = () => {
+    return `${floorPrefix}${idCounter.current.toString().padStart(3, '0')}`;
+  };
+
   function savePath() {
     if (pathData.length <= 0) return;
     const invalidNodes = pathData.filter(node => node.isSearchable && (!node.name || node.name.trim() === ""));
@@ -183,7 +196,7 @@ console.log(largestIdObject,'largestIdObject');
             text: "New Marker",
             coordinates: scaledCoordinates
           };
-          setInternalMarkerData([...internalMarkerData, newMarker]);
+          setInternalMarkerData((prev) => [...prev, newMarker]);
           setCurrentSelectedMarker(newMarker.id);
           setCurrentSelectedPathPoint("");
           return;
@@ -194,7 +207,7 @@ console.log(largestIdObject,'largestIdObject');
         setPathData((currentPathData) => {
           if (currentPathData.length <= 0) {
             const pathPointObj = {
-              id: `path-${idCounter.current}`,
+              id: generateNewNodeId(),
               coordinates: scaledCoordinates,
               neighbors: [],
             };
@@ -211,7 +224,7 @@ console.log(largestIdObject,'largestIdObject');
 
           if (!currentSelectedPathData) {
             const pathPointObj = {
-              id: `path-${idCounter.current}`,
+              id: generateNewNodeId(),
               coordinates: scaledCoordinates,
               neighbors: [],
             };
@@ -220,7 +233,7 @@ console.log(largestIdObject,'largestIdObject');
           }
 
           const pathPointObj = {
-            id: `path-${idCounter.current}`,
+            id: generateNewNodeId(),
             coordinates: scaledCoordinates,
             neighbors: [
               {
@@ -266,7 +279,7 @@ console.log(largestIdObject,'largestIdObject');
           // console.log(pathPointObj,5678);
           return [...newPathData, pathPointObj];
         });
-        setCurrentSelectedPathPoint(`path-${idCounter.current}`);
+        setCurrentSelectedPathPoint(generateNewNodeId());
         idCounter.current = idCounter.current + 1;
       });
       const undoStack = [];
@@ -281,6 +294,7 @@ console.log(largestIdObject,'largestIdObject');
     isJoinMode,
     isDeleteMode,
     isSplitMode,
+    isMarkerMode,
   ]);
 
   React.useEffect(() => {
@@ -564,6 +578,37 @@ console.log(largestIdObject,'largestIdObject');
       .on("mouseout", function (event, data) {
         setHoveredNode(null);
       });
+
+    D3SVG.selectAll(".path-node-id-label")
+      .data(pathData)
+      .join("text")
+      .attr("class", "path-node-id-label")
+      .text((value) => value.id)
+      .attr(
+        "x",
+        (value) =>
+          getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            value.coordinates[0],
+            value.coordinates[1]
+          )[0] + sizeScale(4.0)
+      )
+      .attr(
+        "y",
+        (value) =>
+          getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            value.coordinates[0],
+            value.coordinates[1]
+          )[1] - sizeScale(1.0)
+      )
+      .attr("font-size", `${sizeScale(3.0)}px`)
+      .attr("fill", "#333")
+      .attr("font-weight", "500")
+      .style("pointer-events", "none");
+
   }, [
     isGettingInitialState,
     floorplan,
@@ -675,7 +720,7 @@ console.log(largestIdObject,'largestIdObject');
           const targetNode = currentPathData.find(n => n.id === data.targetId);
           if (!sourceNode || !targetNode) return currentPathData;
 
-          const newNodeId = `path-${idCounter.current}`;
+          const newNodeId = generateNewNodeId();
           idCounter.current = idCounter.current + 1;
 
           const distanceToSource = getDistance(scaledCoordinates[0], scaledCoordinates[1], sourceNode.coordinates[0], sourceNode.coordinates[1]);
@@ -769,7 +814,7 @@ console.log(largestIdObject,'largestIdObject');
         .on("click", function(event, data) {
            event.stopPropagation();
            if (isDeleteMode && isMarkerMode) {
-             setInternalMarkerData(internalMarkerData.filter(m => m.id !== data.id));
+             setInternalMarkerData(prev => prev.filter(m => m.id !== data.id));
              if (currentSelectedMarker === data.id) setCurrentSelectedMarker(null);
              return;
            }
@@ -787,10 +832,10 @@ console.log(largestIdObject,'largestIdObject');
            const iconKey = value.iconType ? value.iconType.toLowerCase() : "toilet";
            return IconMap[iconKey] || IconMap["toilet"];
         })
-        .attr("width", sizeScale(6.0))
-        .attr("height", sizeScale(6.0))
-        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0] - sizeScale(3.0))
-        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] - sizeScale(3.0))
+        .attr("width", sizeScale(12.0))
+        .attr("height", sizeScale(12.0))
+        .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0] - sizeScale(6.0))
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] - sizeScale(6.0))
         .style("pointer-events", "none");
         
       D3SVG.selectAll(".map-marker-text")
@@ -798,9 +843,9 @@ console.log(largestIdObject,'largestIdObject');
         .join("text")
         .attr("class", "map-marker-text")
         .attr("x", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[0])
-        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] + sizeScale(1.0))
+        .attr("y", (value) => getRealPointCoordinateRelativeToDigitisationZone(digitisationZone, currentRotation, value.coordinates[0], value.coordinates[1])[1] + sizeScale(1.5))
         .attr("text-anchor", "middle")
-        .attr("font-size", `${sizeScale(3.5)}px`)
+        .attr("font-size", `${sizeScale(6.5)}px`)
         .attr("font-weight", "bold")
         .attr("fill", "black")
         .style("pointer-events", "none")
@@ -891,7 +936,12 @@ console.log(largestIdObject,'largestIdObject');
               {activeMarkerToShow.type === "icon" ? (
                 <div className="node-field">
                   <span className="node-field-label">Icon Name</span>
-                  <input type="text" value={activeMarkerToShow.iconType || ""} onChange={(e) => updateMarkerProperty("iconType", e.target.value)} placeholder="e.g. toilet, door, lift" />
+                  <select value={activeMarkerToShow.iconType || ""} onChange={(e) => updateMarkerProperty("iconType", e.target.value)}>
+                    <option value="" disabled>Select an icon</option>
+                    {Object.keys(IconMap).map((key) => (
+                      <option key={key} value={key}>{key}</option>
+                    ))}
+                  </select>
                 </div>
               ) : (
                 <div className="node-field">

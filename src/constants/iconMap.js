@@ -16,6 +16,9 @@ import RampIcon from "../assets/icons/ramp.svg";
 import LabIcon from "../assets/icons/lab.svg";
 import SecurityIcon from "../assets/icons/security.svg";
 import CounterIcon from "../assets/icons/ticker-counter.svg";
+import BedroomIcon from "../assets/icons/bedroom.svg";
+import KitchenIcon from "../assets/icons/kitchen.svg";
+import PorchIcon from "../assets/icons/porch.svg";
 
 export const IconMap = {
   door: door,
@@ -35,5 +38,9 @@ export const IconMap = {
   ramp: RampIcon,
   lab: LabIcon,
   security: SecurityIcon,
-  counter: CounterIcon
+  counter: CounterIcon,
+  "dining-area": DineIcon,
+  bedroom: BedroomIcon,
+  kitchen: KitchenIcon,
+  porch: PorchIcon
 };

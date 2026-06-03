@@ -20,6 +20,7 @@ export default function Floorplan({
   currentRotation,
   togglePathCreation,
   setPath,
+  floorPrefix = "G-"
 }) {
   const [pathData, setPathData] = React.useState([]);
   const [currentSelectedPathPoint, setCurrentSelectedPathPoint] =
@@ -36,7 +37,12 @@ export default function Floorplan({
   const [redoStack, setRedoStack] = React.useState([]);
   const translationRef = React.useRef([0, 0]);
   const scaleRef = React.useRef(1);
-  const idCounter = React.useRef(0);
+  const idCounter = React.useRef(1);
+
+  const generateNewNodeId = () => {
+    return `${floorPrefix}${idCounter.current.toString().padStart(3, '0')}`;
+  };
+
   function savePath() {
     if (pathData.length <= 0) return;
     const invalidNodes = pathData.filter(node => node.isSearchable && (!node.name || node.name.trim() === ""));
@@ -154,12 +160,12 @@ export default function Floorplan({
           console.log(idCounter.current);
           if (currentPathData.length <= 0) {
             const pathPointObj = {
-              id: `path-${idCounter.current}`,
+              id: generateNewNodeId(),
               coordinates: scaledCoordinates,
               neighbors: [],
             };
             console.log(pathPointObj);
-            setCurrentSelectedPathPoint(`path-${idCounter.current}`);
+            setCurrentSelectedPathPoint(generateNewNodeId());
             return [pathPointObj];
           }
           const currentSelectedPathData = currentPathData.find((item) => {
@@ -169,7 +175,7 @@ export default function Floorplan({
 
           if (!currentSelectedPathData) {
             const pathPointObj = {
-              id: `path-${idCounter.current}`,
+              id: generateNewNodeId(),
               coordinates: scaledCoordinates,
               neighbors: [],
             };
@@ -178,7 +184,7 @@ export default function Floorplan({
           }
 
           const pathPointObj = {
-            id: `path-${idCounter.current}`,
+            id: generateNewNodeId(),
             coordinates: scaledCoordinates,
             neighbors: [
               {
@@ -222,8 +228,8 @@ export default function Floorplan({
           setDetailedSelectedPoint(pathPointObj);
           return [...newPathData, pathPointObj];
         });
+        setCurrentSelectedPathPoint(generateNewNodeId());
         idCounter.current = idCounter.current + 1;
-        setCurrentSelectedPathPoint(`path-${idCounter.current}`);
       });
       const undoStack = [];
       const redoStack = [];
@@ -620,7 +626,7 @@ export default function Floorplan({
           const targetNode = currentPathData.find(n => n.id === data.targetId);
           if (!sourceNode || !targetNode) return currentPathData;
 
-          const newNodeId = `path-${idCounter.current}`;
+          const newNodeId = generateNewNodeId();
           idCounter.current = idCounter.current + 1;
 
           const distanceToSource = getDistance(scaledCoordinates[0], scaledCoordinates[1], sourceNode.coordinates[0], sourceNode.coordinates[1]);

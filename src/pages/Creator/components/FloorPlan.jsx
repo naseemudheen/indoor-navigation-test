@@ -742,10 +742,10 @@ console.log(trans,4534);
       const D3SVG = select(".floorplan-svg-group");
 
       const currentZoom = trans?.k || 1;
-      const scaledIconSize = currentZoom > 3 ? 6.0 / currentZoom * 3 : 6.0;
-      const scaledTextSize = currentZoom > 3 ? 3.5 / currentZoom * 3 : 3.5;
+      const scaledIconSize = currentZoom > 3 ? 12.0 / currentZoom * 3 : 12.0;
+      const scaledTextSize = currentZoom > 3 ? 6.5 / currentZoom * 3 : 6.5;
       const scaledIconOffset = scaledIconSize / 2;
-      const scaledTextOffset = currentZoom > 3 ? 1.0 / currentZoom * 3 : 1.0;
+      const scaledTextOffset = currentZoom > 3 ? 1.5 / currentZoom * 3 : 1.5;
 
       D3SVG.selectAll(".map-marker-icon")
         .data(markerData.filter(m => m.type === 'icon'))

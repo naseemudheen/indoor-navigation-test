@@ -187,6 +187,7 @@ export default function App() {
   const [selectedStartPath, setSelectedStartPath] = React.useState("");
   const [selectedEndPath, setSelectedEndPath] = React.useState("");
   const [selectedPath, setSelectedPath] = React.useState([]);
+  const [currentFloorPrefix, setCurrentFloorPrefix] = React.useState("G-");
 
   const svgElementRef = React.useRef(null);
   const svgZoomRef = React.useRef(zoom().on("zoom",(event)=>{
@@ -195,6 +196,7 @@ export default function App() {
 
   function setupInitialData() {
     setIsGettingInitalState(true);
+    setCurrentFloorPrefix("G-");
     getNaturalImageDimensions(FloorplanImage)
       .then((result) => {
         setFloorplan(result);
@@ -234,6 +236,7 @@ export default function App() {
     setDigitisationZone({ origin: [100, 800], width: 100, height: 100 });
     setSelectedFocusView(null);
     resetSelectedUnits();
+    setCurrentFloorPrefix(type ? `${type}-` : "G-");
     if(type==='G'){
       getNaturalImageDimensions(FloorplanImage)
       .then((result) => {
@@ -615,6 +618,8 @@ export default function App() {
           <h3 className="section-title">Floor Selection</h3>
           <div className="floor-buttons">
             <button className="floor-btn" onClick={() => changeFloorplanData("G")}>Ground Floor</button>
+            <button className="floor-btn" onClick={() => changeFloorplanData("1")}>First Floor</button>
+            <button className="floor-btn" onClick={() => changeFloorplanData("B")}>Basement Floor</button>
           </div>
         </div>
 
@@ -721,6 +726,7 @@ export default function App() {
               currentRotation={currentRotation}
               togglePathCreation={togglePathCreation}
               setPath={(data) => savePathToDisk(data)}
+              floorPrefix={currentFloorPrefix}
             />
           ) : (
             <PathEditingFloorplan
@@ -733,6 +739,7 @@ export default function App() {
               setPath={(data, mData) => savePathToDisk(data, mData || markerData)}
               markerData={markerData}
               setMarkerData={(data) => savePathToDisk(pathData, data)}
+              floorPrefix={currentFloorPrefix}
             />
           )}
         </div>
