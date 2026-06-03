@@ -22,7 +22,7 @@ export const findPath = (startPoint, endPoint) => {
     mergedData?.forEach((item) => {
       simplifiedPathData[item.id] = {};
       item.neighbors.forEach((item1) => {
-        simplifiedPathData[item.id][item1.id] = { distance: item1.distance };
+        simplifiedPathData[item.id][item1.id] = item1.distance;
       });
     });
     console.log(simplifiedPathData);

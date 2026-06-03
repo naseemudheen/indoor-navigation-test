@@ -33,9 +33,11 @@ const cancerThreeLabels = [];
 const basementData = [];
 import _groundData from "../data/maps/groundfloor_data.json";
 const groundData = _groundData.nodes || _groundData;
+const markerData = _groundData.markers || [];
 const firstData = [];
 const secondData = [];
 import { ChevronDown, ChevronUp } from "../components/Icons";
+import { NAVIGATION_ZOOM_LEVEL } from "../constants/zoomConfig";
 import { IoCloseOutline } from "react-icons/io5";
 import { FaWalking } from "react-icons/fa";
 import { Link } from "react-router-dom";
@@ -203,6 +205,8 @@ function getFloorplanImage(type) {
     }
   }
 }
+
+
 
 const NavigationPage = () => {
   let { state } = useLocation();
@@ -706,8 +710,7 @@ const NavigationPage = () => {
       svgZoomRef.current.transform,
       zoomIdentity
         .translate(floorplan.width / 2, floorplan.height / 2)
-        // .scale(2.5)
-        .scale(14)
+        .scale(NAVIGATION_ZOOM_LEVEL)
         .translate(-centerCoordinates[0], -centerCoordinates[1]),
     );
   }
@@ -1020,7 +1023,7 @@ console.log(finalFloor);
   
   return (
     <ErrorBoundary fallback={<ErrorPage />}>
-    <div className="h-full max-w-3xl floorplan-container">
+    <div className="fixed inset-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[100dvh] floorplan-container z-0">
       <Floorplan
         isGettingInitialState={isGettingInitialState}
         svgElementRef={svgElementRef}
@@ -1054,10 +1057,11 @@ console.log(finalFloor);
         icons={iconData}
         turningPoint={turningPoint}
         passedFloors={passedFloors}
+        markerData={markerData}
       />
       <TopNavigationSection message={message} currentFloor={floor} />
       {/* <BottomNavigation/> */}
-      <div className="fixed bottom-0 flex flex-col items-end w-full h-auto max-w-3xl gap-4">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-end w-full h-auto max-w-3xl gap-4">
         <div className="flex flex-col mr-4 divide-y w-fit">
           <button
             onClick={handleNextClick}

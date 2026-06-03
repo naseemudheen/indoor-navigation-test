@@ -79,6 +79,8 @@ function polygonWithRoundedCorners(points, r) {
   }`);
 }
 
+const INITIAL_MAP_ZOOM_LEVEL = 3;
+
 const DirectionFloor = ({
   isGettingInitialState,
   svgElementRef,
@@ -132,12 +134,10 @@ const DirectionFloor = ({
       if (!isGettingInitialState) {
         console.log(import.meta.env.VITE_TRANSLATION);
 
-        const defaultZoomLevel = 8.9; // Change this to your desired default zoom level
-        // const defaultTranslation = [0, 0,5]; // Replace x and y with your desired translation values
-        const defaultTranslation = [-45691, -47246, 8.9]; // Replace x and y with your desired translation values
+        const defaultTranslation = [-45691, -47246, INITIAL_MAP_ZOOM_LEVEL]; // Replace x and y with your desired translation values
         const svgElement = select("#floorplan-container");
         if (svgElementRef.current) {
-          console.log("Applying default zoom level:", defaultZoomLevel);
+          console.log("Applying default zoom level:", INITIAL_MAP_ZOOM_LEVEL);
           svgElementRef.current.transition(); // Add transition here
           svgElementRef.current
             .transition() // Add transition here
@@ -147,7 +147,7 @@ const DirectionFloor = ({
               defaultTranslation[0],
               defaultTranslation[1],
             )
-            .call(svgZoomRef.current.scaleTo, defaultZoomLevel);
+            .call(svgZoomRef.current.scaleTo, INITIAL_MAP_ZOOM_LEVEL);
           // .call(svgZoomRef.current.rotateBy, rotationAngle)
         } else {
           console.error("SVG element not found. Cannot apply default zoom.");
@@ -1064,14 +1064,16 @@ const DirectionFloor = ({
           value.coordinates[0],
           value.coordinates[1],
         );
-        const scaleX = 1.5; // Scale factor for the x-axis
-        const scaleY = 1.5;
+        const currentZoom = trans?.k || 1;
+        const baseScale = 0.5;
+        const scaleX = currentZoom > 3 ? baseScale / currentZoom * 3 : baseScale;
+        const scaleY = scaleX;
         const pathElement = D3SVG.select(".path-point path");
         const bbox = pathElement.node()?.getBBox();
         const centerX = bbox?.x + bbox?.width;
         const centerY = bbox?.y + bbox?.height;
-        return `translate(${coordinates[0] - centerX}, ${
-          coordinates[1] - centerY
+        return `translate(${coordinates[0] - (centerX * scaleX)}, ${
+          coordinates[1] - (centerY * scaleY)
         }) scale(${scaleX}, ${scaleY})`; // Correctly format the transform attribute
       })
       .raise();

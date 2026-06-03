@@ -27,6 +27,8 @@ import starIcon from "../assets/icons/start-point.svg";
 import endIcon from "../assets/icons/end-point.svg";
 import Rate from "./rate";
 import { FaSpinner } from "react-icons/fa";
+import { IconMap } from "../constants/iconMap";
+import { FLOORPLAN_INITIAL_ZOOM as INITIAL_MAP_ZOOM_LEVEL } from "../constants/zoomConfig";
 // import {
 //   renderTimerTop,
 //   renderTimerBottom,
@@ -76,6 +78,8 @@ function polygonWithRoundedCorners(points, r) {
   }`);
 }
 
+
+
 export default function Floorplan({
   isGettingInitialState,
   svgElementRef,
@@ -109,6 +113,7 @@ export default function Floorplan({
   turningPoint,
   isReached,
   setIsReached,
+  markerData,
 }) {
   const dispatch = useDispatch();
   const completedPath = useRef([]);
@@ -179,21 +184,21 @@ export default function Floorplan({
       .join("g")
       .attr("class", "path-point2 relative z-20");
 
+    const currentZoom = trans?.k || 1;
+    const baseWidth = 40; // Reduced from 70
+    const baseHeight = 60; // Reduced from 90
+    const scaledWidth = currentZoom > 2 ? baseWidth / currentZoom * 2 : baseWidth;
+    const scaledHeight = currentZoom > 2 ? baseHeight / currentZoom * 2 : baseHeight;
+
     pathPoints2.selectAll("image")
       .data(d => [d])
       .join("image")
       .attr("xlink:href", (value) => {
         if (selectedEndPath?.floor === selectedStartPath?.floor) {
-          // if (selectedStartPath?.id === value.id) {
-          //   // return starIcon;
-          // }
           if (selectedEndPath?.id === value.id) {
             return endIcon;
           }
         } else {
-          // if (selectedStartPath?.id === value.id) {
-          //   // return starIcon;
-          // }
           if (selectedEndPath?.id === value.id) {
             return endIcon;
           }
@@ -202,10 +207,10 @@ export default function Floorplan({
           }
         }
       })
-      .attr("width", 70)
-      .attr("height", 90)
-      .attr("x", -35) // Center horizontally (width/2)
-      .attr("y", -90); // Anchor at the bottom (full height)
+      .attr("width", scaledWidth)
+      .attr("height", scaledHeight)
+      .attr("x", -scaledWidth / 2) // Center horizontally (width/2)
+      .attr("y", -scaledHeight); // Anchor at the bottom (full height)
 
     pathPoints2
       .transition()
@@ -232,6 +237,7 @@ export default function Floorplan({
     selectedStartPath,
     selectedEndPath,
     stair,
+    trans?.k,
   ]);
 
   useEffect(() => {
@@ -255,6 +261,11 @@ export default function Floorplan({
         );
 
         const pointerLayer = select("#layer-pointer");
+        
+        const currentZoom = trans?.k || 1;
+        const baseSize = 40;
+        const scaledSize = currentZoom > 2 ? baseSize / currentZoom * 2 : baseSize;
+        const offset = -scaledSize / 2;
 
         // Render a single pointer and transition its position
         pointerLayer.selectAll(".current-user-pointer")
@@ -262,17 +273,17 @@ export default function Floorplan({
           .join("image")
           .attr("class", "current-user-pointer relative z-30")
           .attr("xlink:href", starIcon)
-          .attr("width", 40)
-          .attr("height", 40)
-          .attr("x", -20) // Center horizontally
-          .attr("y", -20) // Center vertically
+          .attr("width", scaledSize)
+          .attr("height", scaledSize)
+          .attr("x", offset) // Center horizontally
+          .attr("y", offset) // Center vertically
           .transition() // Add smooth animation for the pointer
           .duration(500)
           .ease(easeQuadInOut)
           .attr("transform", (d) => `translate(${d.x}, ${d.y}) rotate(${currentRotation})`);
       }
     }
-  }, [isGettingInitialState, index, currentRotation, pathData, currentPath]);
+  }, [isGettingInitialState, index, currentRotation, pathData, currentPath, trans?.k, digitisationZone]);
 
   // React.useEffect(() => {
   //   const lineData = pathData
@@ -522,10 +533,9 @@ export default function Floorplan({
   React.useEffect(
     () => {
       if (!isGettingInitialState) {
-        const defaultZoomLevel = 1; // Change this to your desired default zoom level
         const defaultTranslation = [-369.7, 1800.29, 5]; // Replace x and y with your desired translation values
         if (svgElementRef.current) {
-          console.log("Applying default zoom level:", defaultZoomLevel);
+          console.log("Applying default zoom level:", INITIAL_MAP_ZOOM_LEVEL);
           select(svgElementRef.current)
             .transition()
             .duration(350)
@@ -535,8 +545,8 @@ export default function Floorplan({
               svgZoomRef.current.translateBy,
               defaultTranslation[0],
               defaultTranslation[1],
-            );
-          // .call(svgZoomRef.current.scaleTo, defaultZoomLevel);
+            )
+            .call(svgZoomRef.current.scaleTo, INITIAL_MAP_ZOOM_LEVEL);
           // .call(svgZoomRef.current.rotateBy, rotationAngle)
         } else {
           console.error("SVG element not found. Cannot apply default zoom.");
@@ -1342,6 +1352,74 @@ export default function Floorplan({
     }
   }
 
+  // render markers
+  React.useEffect(() => {
+    if (!isGettingInitialState && markerData && markerData.length > 0) {
+      const sizeScale = scaleLinear()
+        .domain([0, 100])
+        .range([0, (Math.abs(digitisationZone.width) * 10) / 100]);
+      const D3SVG = select(".floorplan-svg-group");
+
+      const currentZoom = trans?.k || 1;
+      const scaledIconSize = currentZoom > 3 ? 12.0 / currentZoom * 3 : 12.0;
+      const scaledTextSize = currentZoom > 3 ? 6.5 / currentZoom * 3 : 6.5;
+      const scaledIconOffset = scaledIconSize / 2;
+      const scaledTextOffset = currentZoom > 3 ? 1.5 / currentZoom * 3 : 1.5;
+
+      D3SVG.selectAll(".map-marker-icon")
+        .data(markerData.filter(m => m.type === 'icon'))
+        .join("image")
+        .attr("class", "map-marker-icon")
+        .attr("href", (value) => {
+           const iconKey = value.iconType ? value.iconType.toLowerCase() : "toilet";
+           return IconMap[iconKey] || IconMap["toilet"];
+        })
+        .attr("width", sizeScale(scaledIconSize))
+        .attr("height", sizeScale(scaledIconSize))
+        .attr("x", -sizeScale(scaledIconOffset))
+        .attr("y", -sizeScale(scaledIconOffset))
+        .attr("transform", (value) => {
+          const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            0,
+            value.coordinates[0],
+            value.coordinates[1]
+          );
+          return `translate(${coordinates[0]}, ${coordinates[1]}) rotate(${currentRotation})`;
+        })
+        .style("pointer-events", "none");
+        
+      D3SVG.selectAll(".map-marker-text")
+        .data(markerData.filter(m => m.type === 'label' || !m.type))
+        .join("text")
+        .attr("class", "map-marker-text")
+        .attr("x", 0)
+        .attr("y", sizeScale(scaledTextOffset))
+        .attr("text-anchor", "middle")
+        .attr("font-size", `${sizeScale(scaledTextSize)}px`)
+        .attr("font-weight", "bold")
+        .attr("fill", "#04553F")
+        .attr("transform", (value) => {
+          const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            0,
+            value.coordinates[0],
+            value.coordinates[1]
+          );
+          return `translate(${coordinates[0]}, ${coordinates[1]}) rotate(${currentRotation})`;
+        })
+        .style("pointer-events", "none")
+        .text((value) => value.text);
+    }
+  }, [
+    isGettingInitialState,
+    floorplan,
+    digitisationZone,
+    currentRotation,
+    markerData,
+    trans?.k
+  ]);
+
   return (
     <div id="floorplan-container" className="relative w-full h-full overflow-hidden">
       <svg
@@ -1349,15 +1427,13 @@ export default function Floorplan({
         className="floorplan-svg w-full h-full"
         preserveAspectRatio="xMidYMid meet"
         viewBox={`0 0 ${floorplan.width || 100} ${floorplan.height || 100}`}
+        style={{
+          transform: `rotate(${-currentRotation}deg)`,
+          transformOrigin: `center`,
+          transition: "transform 0.8s cubic-bezier(0.455, 0.03, 0.515, 0.955)",
+        }}
       >
-        <g
-          id="map-rotation-layer"
-          style={{
-            transform: `rotate(${-currentRotation}deg)`,
-            transformOrigin: `${(floorplan.width || 100) / 2}px ${(floorplan.height || 100) / 2}px`,
-            transition: "transform 0.8s cubic-bezier(0.455, 0.03, 0.515, 0.955)",
-          }}
-        >
+        <g id="map-rotation-layer">
           <g className="floorplan-svg-group">
             {/* Layer 1: Base Floorplan */}
             <image

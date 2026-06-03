@@ -4,7 +4,7 @@ import { ArrowUp } from "../../components/Icons";
 
 const TopNavigationSection = ({ message, currentFloor }) => {
   return (
-    <div className="fixed max-w-3xl top-0 w-full h-auto bg-white flex gap-3 items-center px-5 py-3 rounded-b-[20px] drop-shadow-md">
+    <div className="fixed max-w-3xl top-0 left-1/2 -translate-x-1/2 w-full h-auto bg-white flex gap-3 items-center px-5 py-3 rounded-b-[20px] drop-shadow-md z-40">
       <div className="flex items-center justify-between w-full gap-3">
         <div className="flex items-center gap-3">
           <div className="p-4 bg-[#DFF2ED] rounded-full w-fit">

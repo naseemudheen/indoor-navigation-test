@@ -749,7 +749,7 @@ const DirectionPage = () => {
     path?.forEach((item) => {
       simplifiedPathData[item.id] = {};
       item.neighbors.forEach((item1) => {
-        simplifiedPathData[item.id][item1.id] = { distance: item1.distance };
+        simplifiedPathData[item.id][item1.id] = item1.distance;
       });
     });
     const result = dijkstrajs.find_path(simplifiedPathData, start?.id, end?.id);
@@ -1051,7 +1051,7 @@ const DirectionPage = () => {
           errMessage={errMessage}
           distance={distance}
           setErrMsg={setErrorMessage}
-          index={index}
+          index={activeIndex}
           icons={iconData}
           markerData={markerData}
         />
