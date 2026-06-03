@@ -23,7 +23,8 @@ export default function Floorplan({
   setPath,
   pathinfo,
   markerData,
-  setMarkerData
+  setMarkerData,
+  floorPrefix = "G-"
 }) {
   const [pathData, setPathData] = React.useState(pathinfo);
   const [currentSelectedPathPoint, setCurrentSelectedPathPoint] =
@@ -64,9 +65,9 @@ export default function Floorplan({
       const largestIdObj = findObjectWithLargestId(pathinfo);
       if (largestIdObj) {
         const largestIdNumber = parseInt(largestIdObj.id.split('-')[1], 10);
-        return largestIdNumber + 1 > 841 ? largestIdNumber + 1 : 841;
+        return largestIdNumber + 1;
       }
-      return 841;
+      return 1;
     })()
   );
 

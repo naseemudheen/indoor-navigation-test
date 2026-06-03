@@ -541,6 +541,12 @@ export default function App() {
   // find path
 
   function findPath() {
+    setSelectedPath([]);
+    
+    if (!selectedStartPath || !selectedEndPath) {
+      return;
+    }
+
     const simplifiedPathData = {};
     pathData.forEach((item) => {
       simplifiedPathData[item.id] = {};
@@ -549,14 +555,17 @@ export default function App() {
       });
     });
 
-    // console.log(JSON.stringify(simplifiedPathData), JSON.stringify(pathData));
-
-    const result = dijkstrajs.find_path(
-      simplifiedPathData,
-      selectedStartPath,
-      selectedEndPath
-    );
-    setSelectedPath(result);
+    try {
+      const result = dijkstrajs.find_path(
+        simplifiedPathData,
+        selectedStartPath,
+        selectedEndPath
+      );
+      setSelectedPath(result);
+    } catch (e) {
+      console.error("Path finding failed:", e);
+      alert("No path could be found between these two points.");
+    }
   }
 
   // -- zoom and reset zoom pan --
@@ -637,7 +646,9 @@ export default function App() {
               }}
             >
               <option value="">No start point selected</option>
-              {pathData.map((item) => (
+              {pathData
+                .filter((item) => item.isSearchable)
+                .map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -656,7 +667,7 @@ export default function App() {
             >
               <option value="">No end point selected</option>
               {pathData
-                .filter((item) => item.name !== selectedStartPath)
+                .filter((item) => item.isSearchable && item.id !== selectedStartPath)
                 .map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}

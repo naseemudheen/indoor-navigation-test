@@ -789,34 +789,34 @@ console.log(trans,4534);
       .range([0, (Math.abs(digitisationZone.width) * 10) / 100]);
     const D3SVG = select(".floorplan-svg-group");
 
-    if (selectedPath.length <= 0) return;
+    if (!selectedPath || selectedPath.length <= 0) {
+      D3SVG.selectAll(".path-line-selected2").remove();
+      D3SVG.selectAll(".path-line-selected").remove();
+      setSelectPath([]);
+      return;
+    }
 
-   
-      const coordinatesData = selectedPath.map((item) => {
+    const coordinatesData = selectedPath.map((item) => {
       const thisPathData = pathData.find((item1) => item1.id === item);
-      const realCoordinates = getRealPointCoordinateRelativeToDigitisationZone(
+      return getRealPointCoordinateRelativeToDigitisationZone(
         digitisationZone,
         currentRotation,
         thisPathData.coordinates[0],
         thisPathData.coordinates[1]
       );
-      selectPath.push(realCoordinates);
-      return realCoordinates;
-      });
-   
+    });
 
-    console.log(selectPath,23);
+    setSelectPath(coordinatesData);
+    setSlice([]); // reset slice state
+
     D3SVG.selectAll(".path-line-selected2")
-      .data([selectPath])
+      .data([coordinatesData])
       .join("path")
       .attr("class", "path-line-selected2")
-      .attr("stroke", (value, index) => {
-      return "yellow";
-      })
+      .attr("stroke", "yellow")
       .attr("stroke-width", sizeScale(2))
       .attr("fill", "transparent")
-      .attr("d", updateLine)
-      .attr("d", (value) => polygonWithRoundedCorners(selectPath, 5));
+      .attr("d", (value) => polygonWithRoundedCorners(value, 5));
   }, [
     isGettingInitialState,
     floorplan,
@@ -827,14 +827,12 @@ console.log(trans,4534);
     selectedEndPath,
     selectedPath,
   ]);
-  function updateLine() {
-    // Slice the data to get a sub-array from 0 to currentIdx
+
+  // Effect to handle navigation stepping logic
+  React.useEffect(() => {
+    if (selectPath.length === 0) return;
+    
     const slicedData = selectPath.slice(0, currentIndex + 1);
-    console.log(slicedData,'slice');
-    slice.push(slicedData);
-    console.log(slicedData,56);
-    // console.log(slicedData);
-    // Generate the path using polygonWithRoundedCorners for the sliced data
     const pathString = polygonWithRoundedCorners(slicedData, 5);
     const sizeScale = scaleLinear()
       .domain([0, 100])
@@ -842,18 +840,17 @@ console.log(trans,4534);
     const D3SVG = select(".floorplan-svg-group");
 
     D3SVG.selectAll(".path-line-selected")
-      .data([slice])
+      .data([slicedData])
       .join("path")
       .attr("class", "path-line-selected")
-      .attr("stroke", (value, index) => {
-        // Add logic here to determine the color based on index or any other condition
-        return "blue"; // Replace with your color logic
-      })
+      .attr("stroke", "blue")
       .attr("stroke-width", sizeScale(2))
       .attr("fill", "transparent")
       .attr("d", pathString);
-  }
+  }, [currentIndex, selectPath, digitisationZone, currentRotation]);
+
   const activeNodeToShow = hoveredNode || selectedNodeDetail;
+  
   return(
          <div id="floorplan-container">
        <button 
