@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { select, pointer, zoom, scaleLinear, drag } from "d3";
+import { select, pointer, zoom, scaleLinear, drag, zoomIdentity } from "d3";
 import { IconMap } from "../../../constants/iconMap";
 import {
   lerp,
   getRealPointCoordinateRelativeToDigitisationZone,
   getPercentageCoordinateRelativeToDigitisationZone,
 } from "../utils";
+import QRCreateModal from "../../../components/QRCreateModal";
+import { Save, Undo2, Redo2, Link2, Scissors, Trash2, MapPin, MousePointer, X, ZoomIn, ZoomOut, Home } from "lucide-react";
 
 function getDistance(x1, y1, x2, y2) {
   const a = x1 - x2;
@@ -43,6 +45,61 @@ export default function Floorplan({
   const [redoStack, setRedoStack] = React.useState([]);
   const translationRef = React.useRef([0, 0]);
   const scaleRef = React.useRef(1);
+  const zoomBehaviorRef = React.useRef(null);
+
+  // Mapped QR Code state hooks
+  const [associatedQr, setAssociatedQr] = React.useState(null);
+  const [loadingQr, setLoadingQr] = React.useState(false);
+  const [showCreateQrModal, setShowCreateQrModal] = React.useState(false);
+  const [showPreviewQr, setShowPreviewQr] = React.useState(null);
+
+  const fetchAssociatedQr = async (nodeId) => {
+    setLoadingQr(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/qr?search=${encodeURIComponent(nodeId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const exactMatch = data.items?.find((item) => item.node_id === nodeId);
+        setAssociatedQr(exactMatch || null);
+      } else {
+        setAssociatedQr(null);
+      }
+    } catch (err) {
+      console.error("Error fetching associated QR:", err);
+      setAssociatedQr(null);
+    } finally {
+      setLoadingQr(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (currentSelectedPathPoint) {
+      fetchAssociatedQr(currentSelectedPathPoint);
+    } else {
+      setAssociatedQr(null);
+    }
+  }, [currentSelectedPathPoint]);
+
+  const handleDetachQr = async (qrId) => {
+    if (!window.confirm("Are you sure you want to delete this QR mapping?")) return;
+    try {
+      const token = localStorage.getItem("paatha_token");
+      const res = await fetch(`http://localhost:8000/api/qr/${qrId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setAssociatedQr(null);
+      } else {
+        alert("Failed to delete QR mapping.");
+      }
+    } catch (err) {
+      console.error("Error detaching QR:", err);
+      alert("An error occurred while deleting QR mapping.");
+    }
+  };
   function findObjectWithLargestId(data) {
     if (!data || data.length === 0) return null;
   
@@ -155,19 +212,19 @@ export default function Floorplan({
         .attr("fill", "url(#grid)")
         .style("pointer-events", "none");
 
-      svg.call(
-        zoom().on("zoom", (ev) => {
-          const transform = ev.transform;
+      const zoomBehavior = zoom().on("zoom", (ev) => {
+        const transform = ev.transform;
 
-          translationRef.current = [transform.x, transform.y];
-          scaleRef.current = transform.k;
+        translationRef.current = [transform.x, transform.y];
+        scaleRef.current = transform.k;
 
-          groupElement.attr(
-            "transform",
-            `translate(${transform.x}, ${transform.y}) scale(${transform.k})`
-          );
-        })
-      );
+        groupElement.attr(
+          "transform",
+          `translate(${transform.x}, ${transform.y}) scale(${transform.k})`
+        );
+      });
+      zoomBehaviorRef.current = zoomBehavior;
+      svg.call(zoomBehavior);
 
       //PATH CREATION HERE !!!!!!
 
@@ -883,27 +940,190 @@ export default function Floorplan({
   const updateMarkerProperty = (property, value) => {
     setInternalMarkerData(prev => prev.map(m => m.id === currentSelectedMarker ? { ...m, [property]: value } : m));
   };
+
+  const activeMode = isMarkerMode 
+    ? "marker" 
+    : isJoinMode 
+      ? "join" 
+      : isSplitMode 
+        ? "split" 
+        : isDeleteMode 
+          ? "delete" 
+          : "path";
+
+  const handleModeChange = (mode) => {
+    const currentMode = isMarkerMode 
+      ? "marker" 
+      : isJoinMode 
+        ? "join" 
+        : isSplitMode 
+          ? "split" 
+          : isDeleteMode 
+            ? "delete" 
+            : "path";
+            
+    const targetMode = currentMode === mode ? "path" : mode;
+
+    setIsMarkerMode(targetMode === "marker");
+    setIsJoinMode(targetMode === "join");
+    setIsSplitMode(targetMode === "split");
+    setIsDeleteMode(targetMode === "delete");
+
+    if (targetMode === "marker") {
+      setCurrentSelectedPathPoint("");
+      setCurrentSelectedMarker(null);
+    }
+  };  const zoomIn = () => {
+    if (zoomBehaviorRef.current) {
+      select("#path-floorplan-container")
+        .select(".path-floorplan-svg")
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 2);
+    }
+  };
+
+  const zoomOut = () => {
+    if (zoomBehaviorRef.current) {
+      select("#path-floorplan-container")
+        .select(".path-floorplan-svg")
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 0.5);
+    }
+  };
+
+  const resetZoom = () => {
+    if (zoomBehaviorRef.current) {
+      select("#path-floorplan-container")
+        .select(".path-floorplan-svg")
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.transform, zoomIdentity);
+    }
+  };
+
   return (
     <React.Fragment>
       <div className="overlay-tools-container">
-        <h4>Edit Path Mode Active</h4>
+        <h4>Edit Path</h4>
+        
         <div className="path-save-cancel-button-container">
-          <button onClick={togglePathEditing}>cancel</button>
-          <button onClick={savePath}>save</button>
-          <button onClick={() => setIsJoinMode(!isJoinMode)}>join mode</button>
-          <button onClick={undo}>Undo</button>
-          <button onClick={redo}>Redo</button>
-          <span>{isJoinMode ? " join mode active" : ""}</span>
-          <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
-            delete mode
-          </button>
-          <span>{isDeleteMode ? " delete mode active" : ""}</span>
-          <button onClick={() => setIsSplitMode(!isSplitMode)}>split mode</button>
-          <span>{isSplitMode ? " split mode active" : ""}</span>
-          <button onClick={() => { setIsMarkerMode(!isMarkerMode); setCurrentSelectedPathPoint(""); setCurrentSelectedMarker(null); setIsJoinMode(false); setIsDeleteMode(false); setIsSplitMode(false); }}>
-            marker mode
-          </button>
-          <span>{isMarkerMode ? " marker mode active" : ""}</span>
+          {/* Group 1: Modes */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "path" ? "active" : ""}`}
+              onClick={() => handleModeChange("path")}
+              data-tooltip="Select & Draw Path"
+            >
+              <MousePointer size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "marker" ? "active" : ""}`}
+              onClick={() => handleModeChange("marker")}
+              data-tooltip="Add Markers"
+            >
+              <MapPin size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "join" ? "active" : ""}`}
+              onClick={() => handleModeChange("join")}
+              data-tooltip="Join Nodes"
+            >
+              <Link2 size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "split" ? "active" : ""}`}
+              onClick={() => handleModeChange("split")}
+              data-tooltip="Split Path"
+            >
+              <Scissors size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "delete" ? "active-delete" : ""}`}
+              onClick={() => handleModeChange("delete")}
+              data-tooltip="Delete Mode"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+
+          <div className="tool-divider"></div>
+
+          {/* Group 2: History */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={undo}
+              data-tooltip="Undo"
+            >
+              <Undo2 size={18} />
+            </button>
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={redo}
+              data-tooltip="Redo"
+            >
+              <Redo2 size={18} />
+            </button>
+          </div>
+
+          <div className="tool-divider"></div>
+
+          {/* Group 3: View Controls */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={zoomIn}
+              data-tooltip="Zoom In"
+            >
+              <ZoomIn size={18} />
+            </button>
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={zoomOut}
+              data-tooltip="Zoom Out"
+            >
+              <ZoomOut size={18} />
+            </button>
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={resetZoom}
+              data-tooltip="Reset View"
+            >
+              <Home size={18} />
+            </button>
+          </div>
+
+          <div className="tool-divider"></div>
+
+          {/* Group 4: Save / Cancel */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className="tool-btn-action cancel"
+              onClick={togglePathEditing}
+            >
+              <X size={14} /> Cancel
+            </button>
+            <button 
+              type="button"
+              className="tool-btn-action save"
+              onClick={savePath}
+            >
+              <Save size={14} /> Save
+            </button>
+          </div>
         </div>
       </div>
       {activeMarkerToShow && isMarkerMode && (
@@ -1105,9 +1325,100 @@ export default function Floorplan({
                 ))}
               </div>
             </div>
+
+            {/* QR Code Mapping Section */}
+            <div className="node-neighbors" style={{ borderTop: "1px solid #f1f5f9", marginTop: "12px", paddingTop: "12px" }}>
+              <strong>QR Code Mapping:</strong>
+              {loadingQr ? (
+                <div style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "6px" }}>Checking QR mapping...</div>
+              ) : associatedQr ? (
+                <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#059669", fontSize: "0.8rem" }}>{associatedQr.qr_code}</span>
+                    <span style={{ fontSize: "0.65rem", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold", color: "#475569" }}>
+                      {associatedQr.qr_type}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#475569" }}>
+                    <strong>Name: </strong>{associatedQr.name}
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPreviewQr(associatedQr)}
+                      style={{ flex: 1, padding: "5px 10px", fontSize: "0.75rem", backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "6px", color: "#2563eb", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" }}
+                    >
+                      Preview
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => handleDetachQr(associatedQr.id)}
+                      style={{ flex: 1, padding: "5px 10px", fontSize: "0.75rem", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "6px", color: "#dc2626", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: "8px" }}>
+                  <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginBottom: "8px" }}>No QR Code mapped.</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowCreateQrModal(true)}
+                    style={{ padding: "8px 12px", fontSize: "0.75rem", backgroundColor: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "6px", color: "#059669", fontWeight: "600", width: "100%", cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    Generate QR Code
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       <div id="path-floorplan-container"></div>
+
+      {showCreateQrModal && (
+        <QRCreateModal
+          nodes={pathData}
+          prefilledNodeId={currentSelectedPathPoint}
+          onClose={() => setShowCreateQrModal(false)}
+          onSuccess={() => {
+            setShowCreateQrModal(false);
+            fetchAssociatedQr(currentSelectedPathPoint);
+          }}
+        />
+      )}
+
+      {showPreviewQr && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000 }}>
+          <div style={{ backgroundColor: "#fff", padding: "24px", borderRadius: "16px", maxWidth: "340px", width: "100%", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: "1px solid #e2e8f0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "8px", marginBottom: "12px" }}>
+              <h4 style={{ margin: 0, fontWeight: "bold", fontSize: "0.9rem", color: "#0f172a" }}>QR Code Preview</h4>
+              <button 
+                onClick={() => setShowPreviewQr(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.2rem", color: "#94a3b8", padding: 0, lineHeight: 1 }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "12px", backgroundColor: "#fff", width: "160px", margin: "0 auto 12px" }}>
+              <img 
+                src={`http://localhost:8000${showPreviewQr.image_path}`} 
+                alt={showPreviewQr.qr_code}
+                style={{ width: "100%", height: "auto" }}
+              />
+            </div>
+            
+            <div>
+              <h5 style={{ margin: "4px 0", fontWeight: "bold", color: "#0f172a", fontSize: "0.85rem" }}>{showPreviewQr.name}</h5>
+              <p style={{ margin: "4px 0", fontWeight: "bold", color: "#059669", fontSize: "0.75rem", fontFamily: "monospace" }}>{showPreviewQr.qr_code}</p>
+              <p style={{ margin: "4px 0", fontSize: "0.7rem", color: "#64748b" }}>
+                Node: {showPreviewQr.node_id} | Type: {showPreviewQr.qr_type}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </React.Fragment>
   );
 }

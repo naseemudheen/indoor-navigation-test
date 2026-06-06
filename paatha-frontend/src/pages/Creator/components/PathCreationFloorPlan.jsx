@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { select, pointer, zoom, scaleLinear, drag } from "d3";
+import { select, pointer, zoom, scaleLinear, drag, zoomIdentity } from "d3";
 import {
   lerp,
   getRealPointCoordinateRelativeToDigitisationZone,
   getPercentageCoordinateRelativeToDigitisationZone,
 } from "../utils";
+import { Save, Undo2, Redo2, Link2, Scissors, Trash2, MousePointer, X, ZoomIn, ZoomOut, Home } from "lucide-react";
 
 function getDistance(x1, y1, x2, y2) {
   const a = x1 - x2;
@@ -38,6 +39,7 @@ export default function Floorplan({
   const translationRef = React.useRef([0, 0]);
   const scaleRef = React.useRef(1);
   const idCounter = React.useRef(1);
+  const zoomBehaviorRef = React.useRef(null);
 
   const generateNewNodeId = () => {
     return `${floorPrefix}${idCounter.current.toString().padStart(3, '0')}`;
@@ -122,19 +124,19 @@ export default function Floorplan({
         .attr("fill", "url(#grid)")
         .style("pointer-events", "none");
 
-      svg.call(
-        zoom().on("zoom", (ev) => {
-          const transform = ev.transform;
+      const zoomBehavior = zoom().on("zoom", (ev) => {
+        const transform = ev.transform;
 
-          translationRef.current = [transform.x, transform.y];
-          scaleRef.current = transform.k;
+        translationRef.current = [transform.x, transform.y];
+        scaleRef.current = transform.k;
 
-          groupElement.attr(
-            "transform",
-            `translate(${transform.x}, ${transform.y}) scale(${transform.k})`
-          );
-        })
-      );
+        groupElement.attr(
+          "transform",
+          `translate(${transform.x}, ${transform.y}) scale(${transform.k})`
+        );
+      });
+      zoomBehaviorRef.current = zoomBehavior;
+      svg.call(zoomBehavior);
 
       svg.on("click", function (event) {
         setUndoStack((prevUndoStack) => [...prevUndoStack, pathData]);
@@ -713,23 +715,174 @@ export default function Floorplan({
   console.log(pathData);
   const activeNodeToShow = (hoveredNode && !isEditingCoords) ? hoveredNode : (currentSelectedPathPoint ? detailedSelectedPoint : null);
   const isSelectedNode = activeNodeToShow?.id === currentSelectedPathPoint;
+
+  const activeMode = isJoinMode 
+    ? "join" 
+    : isSplitMode 
+      ? "split" 
+      : isDeleteMode 
+        ? "delete" 
+        : "path";
+
+  const handleModeChange = (mode) => {
+    const currentMode = isJoinMode 
+      ? "join" 
+      : isSplitMode 
+        ? "split" 
+        : isDeleteMode 
+          ? "delete" 
+          : "path";
+          
+    const targetMode = currentMode === mode ? "path" : mode;
+
+    setIsJoinMode(targetMode === "join");
+    setIsSplitMode(targetMode === "split");
+    setIsDeleteMode(targetMode === "delete");
+  };
+
+  const zoomIn = () => {
+    if (zoomBehaviorRef.current) {
+      select("#path-floorplan-container")
+        .select(".path-floorplan-svg")
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 2);
+    }
+  };
+
+  const zoomOut = () => {
+    if (zoomBehaviorRef.current) {
+      select("#path-floorplan-container")
+        .select(".path-floorplan-svg")
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 0.5);
+    }
+  };
+
+  const resetZoom = () => {
+    if (zoomBehaviorRef.current) {
+      select("#path-floorplan-container")
+        .select(".path-floorplan-svg")
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.transform, zoomIdentity);
+    }
+  };
+
   return (
     <React.Fragment>
       <div className="overlay-tools-container">
-        <h4>Create Path Mode Active</h4>
+        <h4>Create Path</h4>
+        
         <div className="path-save-cancel-button-container">
-          <button onClick={togglePathCreation}>cancel</button>
-          <button onClick={savePath}>save</button>
-          <button onClick={() => setIsJoinMode(!isJoinMode)}>join mode</button>
-          <button onClick={undo}>Undo</button>
-          <button onClick={redo}>Redo</button>
-          <span>{isJoinMode ? " join mode active" : ""}</span>
-          <button onClick={() => setIsDeleteMode(!isDeleteMode)}>
-            delete mode
-          </button>
-          <span>{isDeleteMode ? " delete mode active" : ""}</span>
-          <button onClick={() => setIsSplitMode(!isSplitMode)}>split mode</button>
-          <span>{isSplitMode ? " split mode active" : ""}</span>
+          {/* Group 1: Modes */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "path" ? "active" : ""}`}
+              onClick={() => handleModeChange("path")}
+              data-tooltip="Select & Draw Path"
+            >
+              <MousePointer size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "join" ? "active" : ""}`}
+              onClick={() => handleModeChange("join")}
+              data-tooltip="Join Nodes"
+            >
+              <Link2 size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "split" ? "active" : ""}`}
+              onClick={() => handleModeChange("split")}
+              data-tooltip="Split Path"
+            >
+              <Scissors size={18} />
+            </button>
+            <button 
+              type="button"
+              className={`tool-btn ${activeMode === "delete" ? "active-delete" : ""}`}
+              onClick={() => handleModeChange("delete")}
+              data-tooltip="Delete Mode"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+
+          <div className="tool-divider"></div>
+
+          {/* Group 2: History */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={undo}
+              data-tooltip="Undo"
+            >
+              <Undo2 size={18} />
+            </button>
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={redo}
+              data-tooltip="Redo"
+            >
+              <Redo2 size={18} />
+            </button>
+          </div>
+
+          <div className="tool-divider"></div>
+
+          {/* Group 3: View Controls */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={zoomIn}
+              data-tooltip="Zoom In"
+            >
+              <ZoomIn size={18} />
+            </button>
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={zoomOut}
+              data-tooltip="Zoom Out"
+            >
+              <ZoomOut size={18} />
+            </button>
+            <button 
+              type="button"
+              className="tool-btn"
+              onClick={resetZoom}
+              data-tooltip="Reset View"
+            >
+              <Home size={18} />
+            </button>
+          </div>
+
+          <div className="tool-divider"></div>
+
+          {/* Group 4: Save / Cancel */}
+          <div className="tool-group">
+            <button 
+              type="button"
+              className="tool-btn-action cancel"
+              onClick={togglePathCreation}
+            >
+              <X size={14} /> Cancel
+            </button>
+            <button 
+              type="button"
+              className="tool-btn-action save"
+              onClick={savePath}
+            >
+              <Save size={14} /> Save
+            </button>
+          </div>
         </div>
       </div>
       <div id="path-floorplan-container">

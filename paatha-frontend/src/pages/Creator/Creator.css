@@ -455,25 +455,36 @@ button {
   border: 1px solid #e2e8f0;
 }
 
-/* Overlay Tools Container */
+/* Overlay Tools Container - Redesigned Floating Horizontal Toolbar */
 .overlay-tools-container {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  z-index: 50;
-  min-width: 250px;
-  border: 1px solid #e2e8f0;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 6px 12px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+  z-index: 102;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: auto;
 }
 
 .overlay-tools-container h4 {
-  margin: 0 0 12px 0;
-  font-size: 0.9rem;
-  color: #1e293b;
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-right: 8px;
+  border-right: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 /* Sub-Floorplan containers override */
@@ -484,44 +495,144 @@ button {
   margin: 0;
 }
 
-.overlay-tools-container button {
-  width: 100%;
-  margin-top: 8px;
-}
-
 .path-save-cancel-button-container {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
 }
 
-.path-save-cancel-button-container button {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  color: #334155;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
+/* Group sections inside the horizontal container */
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.path-save-cancel-button-container button:hover {
+.tool-divider {
+  width: 1px;
+  height: 20px;
   background-color: #e2e8f0;
+  margin: 0 4px;
 }
 
-.path-save-cancel-button-container span {
-  font-size: 0.75rem;
+/* Restyle buttons to be neat and compact with icons */
+.tool-btn {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #64748b;
-  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
-.path-save-cancel-button-container input {
-  padding: 6px;
+.tool-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.tool-btn.active {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+/* Mode toggles active style variations for different tools */
+.tool-btn.active-delete {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #ef4444;
+}
+
+.tool-btn.active-delete:hover {
+  background-color: #fee2e2;
+}
+
+.tool-btn.active-save {
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+.tool-btn.active-save:hover {
+  background-color: #d1fae5;
+}
+
+/* Tooltip style */
+.tool-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background-color: #0f172a;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 4px 8px;
   border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  z-index: 200;
+  font-weight: 500;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tool-btn:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  bottom: -36px;
+}
+
+/* Button style override for regular styled buttons like save/cancel if we don't want them as squares */
+.tool-btn-action {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
   border: 1px solid #cbd5e1;
-  font-size: 0.8rem;
-  width: 100%;
+  background-color: #ffffff;
+  color: #475569;
+}
+
+.tool-btn-action:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.tool-btn-action.save {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.tool-btn-action.save:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.tool-btn-action.cancel {
+  background-color: #ffffff;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+.tool-btn-action.cancel:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }

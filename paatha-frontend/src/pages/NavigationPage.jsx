@@ -35,12 +35,14 @@ const firstData = [];
 const secondData = [];
 import { ChevronDown, ChevronUp } from "../components/Icons";
 import { NAVIGATION_ZOOM_LEVEL } from "../constants/zoomConfig";
-import { IoCloseOutline } from "react-icons/io5";
+import { IoCloseOutline, IoLocateOutline } from "react-icons/io5";
+import NavigationRecalibrationModal from "../components/NavigationRecalibrationModal";
+
 import { FaWalking } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "../utils";
 import { useDispatch, useSelector } from "react-redux";
-import { setFloor } from "../redux/mapSlice";
+import { setFloor, setInitialPath, setIntermediatePath, setFinalPath } from "../redux/mapSlice";
 import simpleFloor from "../assets/floors/simple.svg";
 // import groundfloor from "../assets/floors/ground-floor.svg";
 // import basementfloor from "../assets/floors/underground-floor.svg";
@@ -223,6 +225,76 @@ const NavigationPage = () => {
   const [receivedBoolean, setReceivedBoolean] = useState(false);
   const [endsearch, setEndSearch] = useState("");
   const dispatch = useDispatch();
+  const sessionId = useSelector((state) => state.map.session_id);
+  const [showRecalibrate, setShowRecalibrate] = useState(false);
+
+  const handleRecalibrateSuccess = (newRoute, currentNodeId) => {
+    const currentMerged = getMergedData();
+    const pathWithFloors = pathSeparator(floors, newRoute);
+    
+    const floorPaths = pathWithFloors.map(({ floor, path }) => ({
+      floor,
+      fullPath: path,
+      start: currentMerged.find((item) => item.id === path[0]),
+      end: currentMerged.find((item) => item.id === path[path.length - 1]),
+    }));
+
+    setInitialFloorPassed(true);
+    setCount(0);
+    
+    if (floorPaths.length === 3) {
+      dispatch(setInitialPath({
+        path: floorPaths[0].fullPath,
+        floor: floorPaths[0].floor,
+        startPoint: floorPaths[0].start,
+        endPoint: floorPaths[0].end,
+      }));
+      dispatch(setIntermediatePath({
+        path: floorPaths[1].fullPath,
+        floor: floorPaths[1].floor,
+        startPoint: floorPaths[1].start,
+        endPoint: floorPaths[1].end,
+      }));
+      dispatch(setFinalPath({
+        path: floorPaths[2].fullPath,
+        floor: floorPaths[2].floor,
+        startPoint: floorPaths[2].start,
+        endPoint: floorPaths[2].end,
+      }));
+    } else if (floorPaths.length === 2) {
+      dispatch(setInitialPath({
+        path: floorPaths[0].fullPath,
+        floor: floorPaths[0].floor,
+        startPoint: floorPaths[0].start,
+        endPoint: floorPaths[0].end,
+      }));
+      dispatch(setIntermediatePath({ path: null, floor: null, startPoint: null, endPoint: null }));
+      dispatch(setFinalPath({
+        path: floorPaths[1].fullPath,
+        floor: floorPaths[1].floor,
+        startPoint: floorPaths[1].start,
+        endPoint: floorPaths[1].end,
+      }));
+    } else if (floorPaths.length === 1) {
+      dispatch(setInitialPath({
+        path: floorPaths[0].fullPath,
+        floor: floorPaths[0].floor,
+        startPoint: floorPaths[0].start,
+        endPoint: floorPaths[0].end,
+      }));
+      dispatch(setIntermediatePath({ path: null, floor: null, startPoint: null, endPoint: null }));
+      dispatch(setFinalPath({ path: null, floor: null, startPoint: null, endPoint: null }));
+    }
+
+    const activeFloorPath = pathWithFloors.find(p => p.floor === floor);
+    if (activeFloorPath) {
+      setCurrentPath(activeFloorPath.path);
+      const arr = activeFloorPath.path.map(id => currentMerged.find(n => n.id === id)).filter(Boolean);
+      setDetailedPath(arr);
+      setStartPoint(currentMerged.find(n => n.id === currentNodeId));
+    }
+  };
+
   const [floorPath, setFloorPath] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [lowLabels, setLowLabels] = useState();
@@ -1113,7 +1185,15 @@ console.log(finalFloor);
               button
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              onClick={() => setShowRecalibrate(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 md:py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full shadow-md transition-all shrink-0"
+              title="Recalibrate position"
+            >
+              <IoLocateOutline className="w-3.5 h-3.5" />
+              Recalibrate
+            </button>
             <div className="p-3 bg-[#EAF7F3] font-black text-xl flex justify-center items-center rounded-full w-12 h-12 text-[#29AB87]">
               {/* <FaWalking className="text-[#29AB87] w-6 h-6" /> */}
               {floor}
@@ -1223,6 +1303,13 @@ console.log(finalFloor);
           </div>
         </Dialog>
       </Transition>
+      {showRecalibrate && (
+        <NavigationRecalibrationModal
+          sessionId={sessionId}
+          onClose={() => setShowRecalibrate(false)}
+          onRecalibrated={handleRecalibrateSuccess}
+        />
+      )}
     </div>
     </ErrorBoundary>
   );

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { IoCloseOutline } from "react-icons/io5";
 
-const QRCreateModal = ({ nodes, onClose, onSuccess }) => {
-  const [name, setName] = useState("");
+const QRCreateModal = ({ nodes, onClose, onSuccess, prefilledNodeId }) => {
+  const [name, setName] = useState(prefilledNodeId ? `QR for ${prefilledNodeId}` : "");
   const [description, setDescription] = useState("");
   const [qrType, setQrType] = useState("JUNCTION");
-  const [nodeId, setNodeId] = useState("");
+  const [nodeId, setNodeId] = useState(prefilledNodeId || "");
   const [xCoord, setXCoord] = useState("");
   const [yCoord, setYCoord] = useState("");
   const [headingDirection, setHeadingDirection] = useState("90");

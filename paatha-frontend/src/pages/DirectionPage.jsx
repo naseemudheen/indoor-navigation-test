@@ -61,6 +61,8 @@ const cancerThreeLabels = [];
 import DirectionFloor from "../components/DirectionFloor";
 const unified_groundData = [];
 import { parseUnifiedFloorData } from "../utils/mapAdapter";
+import QRScanner from "../components/QRScanner";
+
 
 import { floors, getMergedData } from "../constants/floors";
 import { pathSeparator } from "../utils/helper/pathSeparator";
@@ -291,6 +293,42 @@ const DirectionPage = () => {
   const svgElementRef = React.useRef(null);
   const [iconData, setIconData] = useState([]);
   let { state } = useLocation();
+  const [showScanner, setShowScanner] = useState(false);
+
+  const handleScanSuccess = async (qrCode) => {
+    setShowScanner(false);
+    try {
+      const res = await fetch("http://localhost:8000/api/qr/resolve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ qr_code: qrCode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const currentMerged = getMergedData();
+        let resolvedNode = currentMerged.find((n) => n.id === data.node_id);
+        if (!resolvedNode) {
+          resolvedNode = {
+            id: data.node_id,
+            name: data.name,
+            coordinates: [data.x_coordinate, data.y_coordinate],
+            floor: 0,
+            neighbors: [],
+          };
+        }
+        dispatch(setFloor(resolvedNode.floor));
+        setSelectedStartPath(resolvedNode);
+      } else {
+        alert("Could not resolve QR code. Invalid or inactive QR.");
+      }
+    } catch (err) {
+      console.error("Resolve error:", err);
+      alert("Error contacting QR resolve API.");
+    }
+  };
+
   const svgZoomRef = React.useRef(
     zoom().on("zoom", (event) => {
       console.log(event);
@@ -1085,6 +1123,7 @@ const DirectionPage = () => {
         onFocusOrigin={() => setActiveField("origin")}
         onFocusDestination={() => setActiveField("destination")}
         destinationRef={destinationInputRef}
+        onScanClick={() => setShowScanner(true)}
       />
 
 
@@ -1184,6 +1223,12 @@ const DirectionPage = () => {
           stair={selectedStair ? selectedStair : null}
           otherStart={selectedOtherStartPath ? selectedOtherStartPath : null}
           distance={distance}
+        />
+      )}
+      {showScanner && (
+        <QRScanner
+          onScanSuccess={handleScanSuccess}
+          onClose={() => setShowScanner(false)}
         />
       )}
     </div>

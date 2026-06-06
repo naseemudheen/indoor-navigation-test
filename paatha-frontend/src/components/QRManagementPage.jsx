@@ -11,7 +11,8 @@ import {
   IoChevronBackOutline,
   IoChevronForwardOutline,
   IoCheckmarkCircle,
-  IoCloseCircle
+  IoCloseCircle,
+  IoCloseOutline
 } from "react-icons/io5";
 import QRCreateModal from "./QRCreateModal";
 import QRBulkGenerator from "./QRBulkGenerator";

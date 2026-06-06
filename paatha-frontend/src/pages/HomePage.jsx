@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { FooterNav, Header } from "../container/Home";
 import { DirectIcon } from "../components/Icons";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 // import floor from "../assets/floors/ground-floor-alt.svg";
 import DirectionFloor from "../components/DirectionFloor";
@@ -30,6 +30,9 @@ const CMFirstFloor = simpleFloor;
 const CMSecondFloor = simpleFloor;
 const CMThirdFloor = simpleFloor;
 import { scaleLinear, zoomIdentity, zoom, merge, easeCircleInOut } from "d3";
+import QRScanner from "../components/QRScanner";
+import { IoQrCodeOutline } from "react-icons/io5";
+
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import { getNaturalImageDimensions } from "../utils/helper";
@@ -257,6 +260,45 @@ const HomePage = () => {
   const [isCreatingFocusView, setIsCreatingFocusView] = React.useState(false);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
   const [pathData, setPathData] = React.useState([]);
+  const [showScanner, setShowScanner] = useState(false);
+  const navigate = useNavigate();
+
+  const handleScanSuccess = async (qrCode) => {
+    setShowScanner(false);
+    try {
+      const res = await fetch("http://localhost:8000/api/qr/resolve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ qr_code: qrCode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Find node
+        const currentMerged = getMergedData();
+        let resolvedNode = currentMerged.find((n) => n.id === data.node_id);
+        if (!resolvedNode) {
+          resolvedNode = {
+            id: data.node_id,
+            name: data.name,
+            coordinates: [data.x_coordinate, data.y_coordinate],
+            floor: 0,
+            neighbors: [],
+          };
+        }
+        dispatch(setFloor(resolvedNode.floor));
+        navigate("/directions", { state: { startPoint: resolvedNode } });
+      } else {
+        alert("Could not resolve QR code. Invalid or inactive QR.");
+      }
+    } catch (err) {
+      console.error("Resolve error:", err);
+      alert("Error contacting QR resolve API.");
+    }
+  };
+
 
   useEffect(() => {
     if (mapData && floor === 0) {
@@ -952,6 +994,15 @@ const HomePage = () => {
       </div>
       <Header />
       <div className="absolute bottom-0 w-full">
+        {/* Floating Scan QR Button */}
+        <div 
+          onClick={() => setShowScanner(true)}
+          className="bg-emerald-600 p-4 flex justify-center items-center w-fit rounded-[20px] fixed bottom-[23vh] right-[1rem] lg:right-[25rem] shadow-[0_2px_3px_1px_rgba(0,0,0,0.3)] cursor-pointer text-white hover:bg-emerald-700 transition-all z-40"
+          title="Scan QR to Start"
+        >
+          <IoQrCodeOutline className="w-6 h-6" />
+        </div>
+
         <Link to="/directions">
           <div className="bg-[#29AB87] p-4 flex justify-center items-center w-fit rounded-[20px] fixed bottom-[15vh] right-[1rem] lg:right-[25rem] shadow-[0_2px_3px_1px_rgba(0,0,0,0.3)]">
             <DirectIcon />
@@ -964,7 +1015,14 @@ const HomePage = () => {
         activeIndex={activeIndex}
         floorFunction={handleFloorChange}
       />
+      {showScanner && (
+        <QRScanner
+          onScanSuccess={handleScanSuccess}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
+
   );
 };
 

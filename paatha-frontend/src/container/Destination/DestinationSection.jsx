@@ -10,7 +10,7 @@ import walk from "../../assets/imgs/walking.png";
 import stretcher from "../../assets/imgs/stretcher.png";
 import { Link } from "react-router-dom";
 import { FaWalking } from "react-icons/fa";
-import { IoCloseCircle } from "react-icons/io5";
+import { IoCloseCircle, IoQrCodeOutline } from "react-icons/io5";
 
 const DestinationSection = ({
   onClose,
@@ -29,6 +29,7 @@ const DestinationSection = ({
   onFocusOrigin,
   onFocusDestination,
   destinationRef,
+  onScanClick,
 }) => {
   const [childToggle, setChildToggle] = useState(false);
   const [walkmode, setWalkmode] = useState(true);
@@ -118,13 +119,20 @@ const DestinationSection = ({
                   : "border-[#DAE1E3]"
               }`}
             />
-            {startInputValue && (
+            {!startInputValue ? (
+              <IoQrCodeOutline
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-emerald-600 hover:text-emerald-800 text-lg z-20"
+                onClick={onScanClick}
+                title="Scan QR starting location"
+              />
+            ) : (
               <IoCloseCircle
                 className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-gray-600 text-lg"
                 onClick={handleClearStart}
               />
             )}
           </div>
+
           <div className="relative w-full">
             <input
               type="text"
