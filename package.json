@@ -1,0 +1,15 @@
+{
+  "name": "paatha-monorepo",
+  "version": "1.0.0",
+  "description": "Root workspace management for Paatha indoor navigation monorepo",
+  "private": true,
+  "scripts": {
+    "install-frontend": "npm install --prefix paatha-frontend",
+    "dev:frontend": "npm --prefix paatha-frontend run dev",
+    "dev:backend": "paatha-backend/venv/bin/uvicorn main:app --reload --app-dir paatha-backend --port 8000",
+    "dev": "concurrently --names \"frontend,backend\" -c \"cyan,green\" \"npm:dev:frontend\" \"npm:dev:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

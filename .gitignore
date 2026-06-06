@@ -3,6 +3,9 @@
 .AppleDouble
 .LSOverride
 
+# ─── Root dependencies ───────────────────────────────────────────────────────
+node_modules/
+
 # ─── Frontend (paatha-frontend) ───────────────────────────────────────────────
 paatha-frontend/node_modules/
 paatha-frontend/dist/
