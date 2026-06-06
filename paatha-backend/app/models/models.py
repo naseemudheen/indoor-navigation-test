@@ -95,3 +95,45 @@ class Edge(Base):
     
     source_node = relationship("Node", foreign_keys=[source_node_id], back_populates="source_edges")
     target_node = relationship("Node", foreign_keys=[target_node_id], back_populates="target_edges")
+
+import uuid
+from datetime import datetime
+from sqlalchemy import Text, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+
+class QRLocation(Base):
+    __tablename__ = "qr_locations"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    qr_code = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    node_id = Column(String, ForeignKey("nodes.id"), nullable=False)
+    x_coordinate = Column(Float, nullable=True)
+    y_coordinate = Column(Float, nullable=True)
+    heading_direction = Column(Integer, nullable=True)
+    qr_type = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False)
+    image_path = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    node = relationship("Node")
+
+
+class NavigationSession(Base):
+    __tablename__ = "navigation_sessions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    device_id = Column(String, nullable=True)
+    start_node_id = Column(String, ForeignKey("nodes.id"), nullable=False)
+    end_node_id = Column(String, ForeignKey("nodes.id"), nullable=False)
+    current_node_id = Column(String, ForeignKey("nodes.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    start_node = relationship("Node", foreign_keys=[start_node_id])
+    end_node = relationship("Node", foreign_keys=[end_node_id])
+    current_node = relationship("Node", foreign_keys=[current_node_id])
+

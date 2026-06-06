@@ -31,6 +31,8 @@ import PathCreationFloorplan from "./components/PathCreationFloorPlan";
 import PathEditingFloorplan from "./components/PathEditingFloorPlan";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "./utils";
 import { useSelector } from "react-redux";
+import QRManagementPage from "../../components/QRManagementPage";
+
 
 
 function getNaturalImageDimensions(path) {
@@ -114,7 +116,9 @@ function getTimerPosition(indexNumber) {
 
 export default function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+  const [activeModule, setActiveModule] = React.useState("map");
   const [isGettingInitialState, setIsGettingInitalState] = React.useState(true);
+
   const [selectedNearbyDistance, setSelectedNearbyDistance] = React.useState(
     10
   );
@@ -618,81 +622,109 @@ export default function App() {
       <div className={`creator-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}>
         <h2 className="creator-title">Paadha Creator</h2>
         
-        <div className="sidebar-section">
-          <h3 className="section-title">Floor Selection</h3>
-          <div className="floor-buttons">
-            <button className="floor-btn" onClick={() => changeFloorplanData("G")}>Ground Floor</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("1")}>First Floor</button>
-            <button className="floor-btn" onClick={() => changeFloorplanData("B")}>Basement Floor</button>
-          </div>
+        {/* Module Navigator */}
+        <div className="flex border border-slate-200 p-1 mb-5 rounded-xl bg-slate-50 gap-1 select-none">
+          <button 
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeModule === "map" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            onClick={() => setActiveModule("map")}
+          >
+            Map Editor
+          </button>
+          <button 
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeModule === "qr" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            onClick={() => setActiveModule("qr")}
+          >
+            QR Management
+          </button>
         </div>
 
-        <div className="sidebar-section">
-          <h3 className="section-title">Path Finding</h3>
-          <div className="point-select-group">
-            <label>Start Point</label>
-            <select
-              className="styled-select"
-              value={selectedStartPath}
-              onChange={(ev) => {
-                setSelectedStartPath(ev.target.value);
-                setSelectedEndPath("");
-                setSelectedPath([]);
-              }}
-            >
-              <option value="">No start point selected</option>
-              {pathData
-                .filter((item) => item.isSearchable)
-                .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+        {activeModule === "qr" ? (
+          <div className="sidebar-section">
+            <h3 className="section-title">QR Management</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Use the main console to view, create, bulk generate, and download QR codes mapped to floor plan coordinates.
+            </p>
           </div>
-          <div className="point-select-group">
-            <label>End Point</label>
-            <select
-              className="styled-select"
-              value={selectedEndPath}
-              onChange={(ev) => {
-                setSelectedEndPath(ev.target.value);
-                setSelectedPath([]);
-              }}
-            >
-              <option value="">No end point selected</option>
-              {pathData
-                .filter((item) => item.isSearchable && item.id !== selectedStartPath)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <button className="primary-btn" onClick={findPath}>Search Path</button>
-        </div>
+        ) : (
+          <>
+            <div className="sidebar-section">
+              <h3 className="section-title">Floor Selection</h3>
+              <div className="floor-buttons">
+                <button className="floor-btn" onClick={() => changeFloorplanData("G")}>Ground Floor</button>
+                <button className="floor-btn" onClick={() => changeFloorplanData("1")}>First Floor</button>
+                <button className="floor-btn" onClick={() => changeFloorplanData("B")}>Basement Floor</button>
+              </div>
+            </div>
 
-        <div className="sidebar-section">
-          <h3 className="section-title">View Controls</h3>
-          <div className="action-buttons">
-            <button className="secondary-btn" onClick={zoomIn}>Zoom In</button>
-            <button className="secondary-btn" onClick={zoomOut}>Zoom Out</button>
-            <button className="secondary-btn" onClick={resetZoomAndPosition}>Reset View</button>
-          </div>
-        </div>
+            <div className="sidebar-section">
+              <h3 className="section-title">Path Finding</h3>
+              <div className="point-select-group">
+                <label>Start Point</label>
+                <select
+                  className="styled-select"
+                  value={selectedStartPath}
+                  onChange={(ev) => {
+                    setSelectedStartPath(ev.target.value);
+                    setSelectedEndPath("");
+                    setSelectedPath([]);
+                  }}
+                >
+                  <option value="">No start point selected</option>
+                  {pathData
+                    .filter((item) => item.isSearchable)
+                    .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="point-select-group">
+                <label>End Point</label>
+                <select
+                  className="styled-select"
+                  value={selectedEndPath}
+                  onChange={(ev) => {
+                    setSelectedEndPath(ev.target.value);
+                    setSelectedPath([]);
+                  }}
+                >
+                  <option value="">No end point selected</option>
+                  {pathData
+                    .filter((item) => item.isSearchable && item.id !== selectedStartPath)
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <button className="primary-btn" onClick={findPath}>Search Path</button>
+            </div>
 
-        <div className="sidebar-section">
-          <h3 className="section-title">Path Management</h3>
-          <div className="action-buttons">
-            {!isEditingPath ? (
-              <button className="outline-btn" id="edit-path-button" onClick={togglePathEditing}>
-                Edit Path
-              </button>
-            ) : null}
-          </div>
-        </div>
+            <div className="sidebar-section">
+              <h3 className="section-title">View Controls</h3>
+              <div className="action-buttons">
+                <button className="secondary-btn" onClick={zoomIn}>Zoom In</button>
+                <button className="secondary-btn" onClick={zoomOut}>Zoom Out</button>
+                <button className="secondary-btn" onClick={resetZoomAndPosition}>Reset View</button>
+              </div>
+            </div>
+
+            <div className="sidebar-section">
+              <h3 className="section-title">Path Management</h3>
+              <div className="action-buttons">
+                {!isEditingPath ? (
+                  <button className="outline-btn" id="edit-path-button" onClick={togglePathEditing}>
+                    Edit Path
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </>
+        )}
       </div>
+
 
       <button
         className={`sidebar-toggle-btn ${isSidebarCollapsed ? "collapsed" : ""}`}
@@ -703,52 +735,56 @@ export default function App() {
       </button>
 
       <div className="creator-main">
-        <div className="floorplan-container">
-          {!isCreatingPath && !isEditingPath ? (
-            <Floorplan
-              isGettingInitialState={isGettingInitialState}
-              svgElementRef={svgElementRef}
-              svgZoomRef={svgZoomRef}
-              floorplan={floorplan}
-              digitisationZone={digitisationZone}
-              currentRotation={currentRotation}
-              unitsData={unitsData}
-              focusViews={focusViews}
-              resetSelectedFocusView={() => setSelectedFocusView(null)}
-              resetSelectedUnits={resetSelectedUnits}
-              selectedUnits={selectedUnits}
-              pathData={pathData}
-              selectedStartPath={selectedStartPath}
-              selectedEndPath={selectedEndPath}
-              selectedPath={selectedPath}
-              zoomToUnit={zoomToUnitAndDetectNearby}
-              markerData={markerData}
-            />
-          ) : isCreatingPath ? (
-            <PathCreationFloorplan
-              isGettingInitialState={isGettingInitialState}
-              floorplan={floorplan}
-              digitisationZone={digitisationZone}
-              currentRotation={currentRotation}
-              togglePathCreation={togglePathCreation}
-              setPath={(data) => savePathToDisk(data)}
-              floorPrefix={currentFloorPrefix}
-            />
-          ) : (
-            <PathEditingFloorplan
-              isGettingInitialState={isGettingInitialState}
-              floorplan={floorplan}
-              digitisationZone={digitisationZone}
-              currentRotation={currentRotation}
-              togglePathEditing={togglePathEditing}
-              pathinfo={pathData}
-              setPath={(data, mData) => savePathToDisk(data, mData || markerData)}
-              markerData={markerData}
-              setMarkerData={(data) => savePathToDisk(pathData, data)}
-              floorPrefix={currentFloorPrefix}
-            />
-          )}
-        </div>
+        {activeModule === "qr" ? (
+          <QRManagementPage nodes={mapData?.nodes || []} />
+        ) : (
+          <div className="floorplan-container">
+            {!isCreatingPath && !isEditingPath ? (
+              <Floorplan
+                isGettingInitialState={isGettingInitialState}
+                svgElementRef={svgElementRef}
+                svgZoomRef={svgZoomRef}
+                floorplan={floorplan}
+                digitisationZone={digitisationZone}
+                currentRotation={currentRotation}
+                unitsData={unitsData}
+                focusViews={focusViews}
+                resetSelectedFocusView={() => setSelectedFocusView(null)}
+                resetSelectedUnits={resetSelectedUnits}
+                selectedUnits={selectedUnits}
+                pathData={pathData}
+                selectedStartPath={selectedStartPath}
+                selectedEndPath={selectedEndPath}
+                selectedPath={selectedPath}
+                zoomToUnit={zoomToUnitAndDetectNearby}
+                markerData={markerData}
+              />
+            ) : isCreatingPath ? (
+              <PathCreationFloorplan
+                isGettingInitialState={isGettingInitialState}
+                floorplan={floorplan}
+                digitisationZone={digitisationZone}
+                currentRotation={currentRotation}
+                togglePathCreation={togglePathCreation}
+                setPath={(data) => savePathToDisk(data)}
+                floorPrefix={currentFloorPrefix}
+              />
+            ) : (
+              <PathEditingFloorplan
+                isGettingInitialState={isGettingInitialState}
+                floorplan={floorplan}
+                digitisationZone={digitisationZone}
+                currentRotation={currentRotation}
+                togglePathEditing={togglePathEditing}
+                pathinfo={pathData}
+                setPath={(data, mData) => savePathToDisk(data, mData || markerData)}
+                markerData={markerData}
+                setMarkerData={(data) => savePathToDisk(pathData, data)}
+                floorPrefix={currentFloorPrefix}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

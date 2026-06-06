@@ -103,3 +103,65 @@ class MarkerOut(MarkerBase):
 
     class Config:
         from_attributes = True
+
+from datetime import datetime
+from uuid import UUID
+from typing import Any
+
+# --- QR Location Schemas ---
+class QRLocationBase(BaseModel):
+    name: str
+    node_id: str
+    x_coordinate: Optional[float] = None
+    y_coordinate: Optional[float] = None
+    heading_direction: Optional[int] = None
+    qr_type: str
+    description: Optional[str] = None
+    is_active: bool = True
+
+class QRLocationCreate(QRLocationBase):
+    pass
+
+class QRLocationUpdate(QRLocationBase):
+    pass
+
+class QRLocationOut(QRLocationBase):
+    id: UUID
+    qr_code: str
+    image_path: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class QRResolveRequest(BaseModel):
+    qr_code: str
+
+class QRResolveResponse(BaseModel):
+    node_id: str
+    name: str
+    x_coordinate: float
+    y_coordinate: float
+    heading_direction: int
+    qr_type: str
+
+# --- Navigation / Recalibration Schemas ---
+class LocationDetail(BaseModel):
+    name: str
+    floor: Any
+
+class GuestSessionCreate(BaseModel):
+    device_id: Optional[str] = None
+    start_location: LocationDetail
+    end_location: LocationDetail
+
+class RecalibrationRequest(BaseModel):
+    current_route_id: UUID
+    qr_code: str
+
+class RecalibrationResponse(BaseModel):
+    session_id: UUID
+    current_node_id: str
+    route: List[str]
+
