@@ -7,9 +7,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import DirectionFloor from "../components/DirectionFloor";
 import { useDispatch, useSelector } from "react-redux";
 const basementData = [];
-import _groundData from "../data/maps/groundfloor_data.json";
-const groundData = _groundData.nodes || _groundData;
-const markerData = _groundData.markers || [];
+// groundData and markerData will be derived from Redux
 const firstData = [];
 const secondData = [];
 const cancerFirst = [];
@@ -200,6 +198,9 @@ const HomePage = () => {
     ...BStairs,
     ...BWards,
   ];
+  const { mapData } = useSelector((state) => state.map);
+  const groundData = mapData?.nodes || [];
+  const markerData = mapData?.markers || [];
   const mergedData = [
     ...groundData,
     // ...basementData,
@@ -255,7 +256,14 @@ const HomePage = () => {
   const [focusViews, setFocusViews] = React.useState([]);
   const [isCreatingFocusView, setIsCreatingFocusView] = React.useState(false);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
-  const [pathData, setPathData] = React.useState(mergedData);
+  const [pathData, setPathData] = React.useState([]);
+
+  useEffect(() => {
+    if (mapData && floor === 0) {
+      setPathData(mapData.nodes || []);
+    }
+  }, [mapData, floor]);
+
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
   const [selectedStartPath, setSelectedStartPath] = React.useState();
   const [selectedOtherStartPath, setSelectedOtherStartPath] = useState();
@@ -265,8 +273,6 @@ const HomePage = () => {
   const [totalSelectedPath, setTotalSelectedPath] = useState([]);
   const [currentStart, setCurrentStart] = useState();
   const [currentEnd, setCurrentEnd] = useState();
-
-  const [mapData, setMapData] = useState();
   const svgElementRef = React.useRef(null);
   const svgZoomRef = React.useRef(
     zoom().on("zoom", (event) => {

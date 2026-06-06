@@ -44,8 +44,9 @@ function getAngle(c, l) {
 }
 
 function polygonWithRoundedCorners(points, r) {
+  if (!points || points.length === 0) return "";
+  if (points.length === 1) return `M${points[0][0]},${points[0][1]}`;
   //move to the first point
-  console.log(points);
   let d = `M${points[0][0]},${points[0][1]}`;
 
   for (let i = 1; i < points?.length - 1; i++) {
@@ -267,7 +268,7 @@ const DirectionFloor = ({
         .attr("stroke", "blue")
         .attr(
           "transform",
-          ` ${digitisationZoneOriginCoordinate[0]}, ${digitisationZoneOriginCoordinate[1]})`,
+          `translate(${digitisationZoneOriginCoordinate[0]}, ${digitisationZoneOriginCoordinate[1]})`,
         );
 
       D3SVG.selectAll(".digitisation-zone-origin-point")
@@ -280,7 +281,7 @@ const DirectionFloor = ({
         .attr("cy", (value) => value.origin[1])
         .attr(
           "transform",
-          ` ${digitisationZoneOriginCoordinate[0]}, ${digitisationZoneOriginCoordinate[1]})`,
+          `translate(${digitisationZoneOriginCoordinate[0]}, ${digitisationZoneOriginCoordinate[1]})`,
         );
       D3SVG.selectAll(".digitisation-zone-right-bottom-point")
         .data([digitisationZone])
@@ -292,7 +293,7 @@ const DirectionFloor = ({
         .attr("cy", (value) => value.origin[1] + value.height)
         .attr(
           "transform",
-          ` ${digitisationZoneOriginCoordinate[0]}, ${digitisationZoneOriginCoordinate[1]})`,
+          `translate(${digitisationZoneOriginCoordinate[0]}, ${digitisationZoneOriginCoordinate[1]})`,
         );
     }
   }, [isGettingInitialState, digitisationZone, currentRotation]);
@@ -853,18 +854,20 @@ const DirectionFloor = ({
           )[1],
       )
       .raise();
-    if (currentPath?.length <= 0) return;
-    const coordinatesData = currentPath?.map((item) => {
+    if (!currentPath || currentPath.length === 0) return;
+    const coordinatesData = currentPath.map((item) => {
       const thisPathData = pathData.find((item1) => item1.id === item);
+      if (!thisPathData || !thisPathData.coordinates) return null;
       const realCoordinates = getRealPointCoordinateRelativeToDigitisationZone(
         digitisationZone,
         currentRotation,
-        thisPathData?.coordinates[0],
-        thisPathData?.coordinates[1],
+        thisPathData.coordinates[0],
+        thisPathData.coordinates[1],
       );
       selectPath?.push(realCoordinates);
       return realCoordinates;
-    });
+    }).filter(Boolean);
+    if (coordinatesData.length === 0) return;
     if (selectedStartPath && selectedEndPath) {
       D3SVG.selectAll(".path-line-selected3")
         .data([coordinatesData])

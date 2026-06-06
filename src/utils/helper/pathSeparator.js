@@ -1,4 +1,4 @@
-import { mergedData } from "../../constants/floors";
+import { getMergedData } from "../../constants/floors";
 
 export const pathSeparator = (floors, result2) => {
   let result23 = [];
@@ -9,7 +9,7 @@ export const pathSeparator = (floors, result2) => {
 
   // Iterate through result2 in order
   result2?.forEach((id) => {
-    const item = mergedData.find((data) => data.id === id);
+    const item = getMergedData().find((data) => data.id === id);
     if (item) {
       // Default to currentFloor if item.floor is missing (intermediate nodes)
       let itemFloor = item.floor;

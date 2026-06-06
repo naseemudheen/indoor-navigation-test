@@ -1,10 +1,13 @@
-import { mergedData } from "../../constants/floors";
+import { getMergedData } from "../../constants/floors";
 
+// helper to calculate distance based on coordinates
 export const calculateDistance = (result2) => {
   const result = [];
   const seenPairs = new Set();
   let totalDistance = 0;
 
+  // Get all paths in map
+  let mergedData = getMergedData();
   mergedData.forEach((path) => {
     if (result2.includes(path.id)) {
       path.neighbors.forEach((neighbor) => {

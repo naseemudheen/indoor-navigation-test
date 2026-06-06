@@ -11,12 +11,14 @@ import counterIcon from "../../components/home-counter.svg";
 import { Link, useNavigate } from "react-router-dom";
 import { featuredRooms } from "../../constants/FeaturedRooms";
 import { MdLocationPin, MdNorthWest } from "react-icons/md";
-import { mergedData } from "../../constants/floors";
+import { getMergedData } from "../../constants/floors";
+import { useSelector } from "react-redux";
 
 const Header = () => {
   const navigate = useNavigate();
   const [endSearch, setEndSearch] = useState("");
-  const CollegePath = mergedData;
+  const { mapData } = useSelector((state) => state.map);
+  const CollegePath = mapData?.nodes || [];
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
   const handleSearchChange = (e) => {

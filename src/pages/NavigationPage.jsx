@@ -31,9 +31,6 @@ const cancerOneLabels = [];
 const cancerTwoLabels = [];
 const cancerThreeLabels = [];
 const basementData = [];
-import _groundData from "../data/maps/groundfloor_data.json";
-const groundData = _groundData.nodes || _groundData;
-const markerData = _groundData.markers || [];
 const firstData = [];
 const secondData = [];
 import { ChevronDown, ChevronUp } from "../components/Icons";
@@ -63,7 +60,8 @@ import {
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import FloorSwitcher from "../components/FloorSwitcher";
-import { mergedData, normalFloors } from "../constants/floors";
+
+import { getMergedData, normalFloors } from "../constants/floors";
 // import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
 // import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
 // import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
@@ -211,6 +209,9 @@ function getFloorplanImage(type) {
 const NavigationPage = () => {
   let { state } = useLocation();
   const floor = useSelector((state) => state.map.floor);
+  const { mapData } = useSelector((state) => state.map);
+  const groundData = mapData?.nodes || [];
+  const markerData = mapData?.markers || [];
   const [turningPoint, setTurningPoint] = useState();
   const initialFloor = useSelector((state) => state.map.initialPath);
   const intermediateFloor = useSelector((state) => state.map.intermediatePath);
@@ -271,7 +272,13 @@ const NavigationPage = () => {
   const [focusViews, setFocusViews] = React.useState([]);
   const [isCreatingFocusView, setIsCreatingFocusView] = React.useState(false);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
-  const [pathData, setPathData] = useState(groundData);
+  const [pathData, setPathData] = useState([]);
+
+  useEffect(() => {
+    if (mapData && floor === 0) {
+      setPathData(mapData.nodes || []);
+    }
+  }, [mapData, floor]);
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
   const [selectedStartPath, setSelectedStartPath] = React.useState("");
   const [selectedEndPath, setSelectedEndPath] = React.useState("");

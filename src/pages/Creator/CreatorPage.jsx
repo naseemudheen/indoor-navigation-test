@@ -30,13 +30,7 @@ import Floorplan from "./components/FloorPlan";
 import PathCreationFloorplan from "./components/PathCreationFloorPlan";
 import PathEditingFloorplan from "./components/PathEditingFloorPlan";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "./utils";
-import groundData2 from '../../data/maps/groundfloor_data.json'
-// import basmentData from '../../data/maps/basementData.json'
-// import secondData from '../../data/maps/secondFloorData.json'
-// import firstData from '../../data/maps/firstFloorData.json'
-// import cancerFirst from '../../data/maps/cancer1Data.json'
-// import cancerSecond from '../../data/maps/cancer2Data.json'
-// import cancerThird from '../../data/maps/cancer3Data.json'
+import { useSelector } from "react-redux";
 
 
 function getNaturalImageDimensions(path) {
@@ -159,27 +153,38 @@ export default function App() {
   const [focusViews, setFocusViews] = React.useState([]);
   const [isCreatingFocusView, setIsCreatingFocusView] = React.useState(false);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
-  const [pathData, setPathData] = React.useState(groundData2.nodes || groundData2);
-  const [markerData, setMarkerData] = React.useState(groundData2.markers || []);
+  const { mapData, mapDataStatus } = useSelector((state) => state.map);
+  const [pathData, setPathData] = React.useState([]);
+  const [markerData, setMarkerData] = React.useState([]);
+
+  React.useEffect(() => {
+    if (mapDataStatus === 'succeeded' && mapData) {
+      setPathData(mapData.nodes || []);
+      setMarkerData(mapData.markers || []);
+    }
+  }, [mapData, mapDataStatus]);
+
   const savePathToDisk = async (newData, newMarkers) => {
     setPathData(newData);
     if (newMarkers) setMarkerData(newMarkers);
     try {
       const payload = { nodes: newData, markers: newMarkers || markerData };
-      const response = await fetch("/api/save", {
+      const token = localStorage.getItem("paatha_token");
+      const response = await fetch("http://localhost:8000/api/v1/map/sync/1", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(payload),
       });
       if (response.ok) {
-        console.log("Successfully saved map path data to src/data/maps/groundfloor_data.json");
+        console.log("Successfully saved map path data to backend");
       } else {
-        console.error("Failed to save map path data to src/data/maps/groundfloor_data.json");
+        console.error("Failed to save map path data to backend");
       }
     } catch (error) {
-      console.error("Error saving map path data to src/data/maps/groundfloor_data.json:", error);
+      console.error("Error saving map path data to backend:", error);
     }
   };
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
@@ -249,8 +254,8 @@ export default function App() {
         setIsGettingInitalState(false);
       })
       .catch((err) => console.log(err));
-      setPathData(groundData2.nodes || groundData2);
-      setMarkerData(groundData2.markers || []);
+      setPathData(mapData?.nodes || []);
+      setMarkerData(mapData?.markers || []);
     }
     setIsGettingInitalState(true);
     
@@ -601,22 +606,12 @@ export default function App() {
   if (isGettingInitialState) {
     return <div className="App">Loading...</div>;
   }
-  console.log(groundData2);
   
-  const flooringData = (groundData2.nodes || groundData2).map((item) => ({
+  const flooringData = (mapData?.nodes || []).map((item) => ({
     ...item,
     floor: 0,
   }));
   console.log(flooringData,'with floor');
-  
-  //  console.log(flooringData.map(item => ({
-  //   ...item,
-  //   id: `path-${parseInt(item.id.split('-')[1]) + 734}`,
-  //   neighbors: item.neighbors.map(neighbor => ({
-  //     ...neighbor,
-  //     id: `path-${parseInt(neighbor.id.split('-')[1]) + 734}`,
-  //   })),
-  // })), 'testing2');
 
   return (
     <div className="creator-layout">

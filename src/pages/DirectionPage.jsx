@@ -24,9 +24,6 @@ import { MdLocationPin, MdNorthWest } from "react-icons/md";
 import dijkstrajs from "dijkstrajs";
 // import { CollegePath,basementData,groundData } from "../data";
 const basementData = [];
-import _groundData from "../data/maps/groundfloor_data.json";
-const groundData = _groundData.nodes || _groundData;
-const markerData = _groundData.markers || [];
 const firstData = [];
 const secondData = [];
 const cancerFirst = [];
@@ -65,7 +62,7 @@ import DirectionFloor from "../components/DirectionFloor";
 const unified_groundData = [];
 import { parseUnifiedFloorData } from "../utils/mapAdapter";
 
-import { floors, mergedData } from "../constants/floors";
+import { floors, getMergedData } from "../constants/floors";
 import { pathSeparator } from "../utils/helper/pathSeparator";
 import { calculateDistance } from "../utils/helper/calculateDistance";
 import FloorSwitcher from "../components/FloorSwitcher";
@@ -202,27 +199,22 @@ const SVG_ICON_MAP = {
 
 function getFloorplanImage(type) {
   switch (type) {
-    case -1: {
+    case -1:
       return basementfloor;
-    }
-    case 0: {
+    case 0:
       return groundfloor;
-    }
-    case 1: {
+    case 1:
       return firstfloor;
-    }
-    case 2: {
+    case 2:
       return secondfloor;
-    }
-    case "C1": {
+    case "C1":
       return CMFirstFloor;
-    }
-    case "C2": {
+    case "C2":
       return CMSecondFloor;
-    }
-    case "C3": {
+    case "C3":
       return CMThirdFloor;
-    }
+    default:
+      return groundfloor;
   }
 }
 
@@ -231,8 +223,12 @@ const DirectionPage = () => {
   const dispatch = useDispatch();
   const floor = useSelector((state) => state.map.floor);
   const initialFloor = useSelector((state) => state.map.initialPath);
-  console.log(initialFloor);
-  console.log(floor);
+  const { mapData } = useSelector((state) => state.map);
+  const groundData = mapData?.nodes || [];
+  const markerData = mapData?.markers || [];
+  const mergedData = [
+    ...groundData,
+  ];
   const [activeIndex, setActiveIndex] = useState(0);
   const [startSearch, setStartSearch] = useState("");
   const [endsearch, setEndSearch] = useState("");
@@ -275,7 +271,13 @@ const DirectionPage = () => {
   const [selectedUnits, setSelectedUnits] = React.useState([]);
   const [focusViews, setFocusViews] = React.useState([]);
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
-  const [pathData, setPathData] = React.useState(mergedData);
+  const [pathData, setPathData] = React.useState([]);
+
+  useEffect(() => {
+    if (mapData && floor === 0) {
+      setPathData(mapData.nodes || []);
+    }
+  }, [mapData, floor]);
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
   const [selectedStartPath, setSelectedStartPath] = React.useState();
   const [selectedOtherStartPath, setSelectedOtherStartPath] = useState();
@@ -486,7 +488,10 @@ const DirectionPage = () => {
         }
         setIsGettingInitalState(false);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setIsGettingInitalState(false);
+      });
   }
   function changeFloorplanData(type) {
     setDigitisationZone({ origin: [100, 800], width: 100, height: 100 });
@@ -592,7 +597,12 @@ const DirectionPage = () => {
       handleClick(2);
     }
     setIsGettingInitalState(true);
-    getNaturalImageDimensions(getFloorplanImage(type))
+    const floorImg = getFloorplanImage(type);
+    if (!floorImg) {
+      setIsGettingInitalState(false);
+      return;
+    }
+    getNaturalImageDimensions(floorImg)
       .then((result) => {
         setFloorplan(result);
         setDigitisationZone({
@@ -602,7 +612,10 @@ const DirectionPage = () => {
         });
         setIsGettingInitalState(false);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setIsGettingInitalState(false);
+      });
   }
   function resetSelectedUnits() {
     setSelectedUnits([]);
@@ -626,6 +639,7 @@ const DirectionPage = () => {
     resetSelectedUnits();
 
     const selectedCenterUnit = pathData.find((item, index) => item.id === id);
+    if (!selectedCenterUnit || !selectedCenterUnit.coordinates) return;
     const centerCoordinates = getRealPointCoordinateRelativeToDigitisationZone(
       digitisationZone,
       currentRotation,
@@ -791,7 +805,7 @@ const DirectionPage = () => {
         }
       }
 
-      const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/navigation/guest-session/`, {
+      const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:8000'}/navigation/guest-session/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -852,7 +866,7 @@ const DirectionPage = () => {
       setDistance(totalDistance / 0.002198);
       setSelectedPath(
         pathWithFloors.find((item) => item.floor === selectedStartPath.floor)
-          .path,
+          ?.path,
       );
       setTotalSelectedPath(pathWithFloors);
       console.log(selectedStartPath);
@@ -972,20 +986,14 @@ const DirectionPage = () => {
   useEffect(() => {
     //change path based on floor
     if (selectedEndPath && selectedStartPath) {
-      const selectedStartPathFloor = totalSelectedPath.find(
-        (item) => item.floor === selectedStartPath.floor,
-      );
-      const selectedEndPathFloor = totalSelectedPath.find(
-        (item) => item.floor === selectedEndPath.floor,
-      );
-      // changeFloorplanData(selectedStartPathFloor?.floor)
-      if (floor === initialFloor.floor) {
-        setSelectedPath(selectedStartPathFloor?.path);
-      } else if (floor === finalFloor.floor && selectedEndPathFloor?.path) {
-        setSelectedPath(selectedEndPathFloor?.path);
+      const currentFloorPath = totalSelectedPath.find((item) => item.floor === floor);
+      if (currentFloorPath) {
+        setSelectedPath(currentFloorPath.path);
+      } else {
+        setSelectedPath([]);
       }
     }
-  }, [floor, totalSelectedPath, selectedPath]);
+  }, [floor, totalSelectedPath]);
   useEffect(() => {
     if (!isGettingInitialState) {
       if (floor === 0 || floor === 1 || floor === 2) {

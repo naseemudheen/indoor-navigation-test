@@ -1,10 +1,31 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+
+export const fetchMapData = createAsyncThunk(
+  "map/fetchMapData",
+  async (floorId, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/map/data/${floorId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch map data");
+      }
+      return await response.json();
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
 
 const mapSlice = createSlice({
   name: "map",
   initialState: {
     floor: 0,
     session_id: null,
+    mapData: {
+      nodes: [],
+      markers: []
+    },
+    mapDataStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+    mapDataError: null,
     initialPath: {
       path: null,
       floor: null,
@@ -65,6 +86,20 @@ const mapSlice = createSlice({
       state.finalPath.startPoint = null;
       state.finalPath.endPoint = null;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchMapData.pending, (state) => {
+        state.mapDataStatus = 'loading';
+      })
+      .addCase(fetchMapData.fulfilled, (state, action) => {
+        state.mapDataStatus = 'succeeded';
+        state.mapData = action.payload;
+      })
+      .addCase(fetchMapData.rejected, (state, action) => {
+        state.mapDataStatus = 'failed';
+        state.mapDataError = action.payload;
+      });
   },
 });
 

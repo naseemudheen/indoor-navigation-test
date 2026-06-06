@@ -1,19 +1,15 @@
-import groundData from "../data/maps/groundfloor_data.json";
+import store from "../redux/store";
 
 export const floors = [0];
 export const normalFloors = [0];
 export const cancerFloors = [0];
 
-export const mergedData = [
-  ...(groundData.nodes || groundData),
-  // ...basementData,
-  // ...firstData,
-  // ...secondData,
-  // ...cancerFirst,
-  // ...cancerSecond,
-  // ...cancerThird,
-];
+export const getMergedData = () => {
+  const state = store.getState();
+  return state.map.mapData?.nodes || [];
+};
 
-export const mergedMarkers = [
-  ...(groundData.markers || []),
-];
+export const getMergedMarkers = () => {
+  const state = store.getState();
+  return state.map.mapData?.markers || [];
+};

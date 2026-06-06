@@ -1,25 +1,25 @@
-import { floors, mergedData } from "../../constants/floors";
+import { floors, getMergedData } from "../../constants/floors";
 import { pathSeparator } from "./pathSeparator";
 import dijkstrajs from "dijkstrajs";
 
 export const findPath = (startPoint, endPoint) => {
   try {
     if (
-      !mergedData.some(
+      !getMergedData().some(
         (item) => item.id === startPoint.id && item.floor === startPoint.floor,
       )
     ) {
       return new Error("Invalid start point");
     }
     if (
-      !mergedData.some(
+      !getMergedData().some(
         (item) => item.id === endPoint.id && item.floor === endPoint.floor,
       )
     ) {
       return new Error("Invalid end point");
     }
     const simplifiedPathData = {};
-    mergedData?.forEach((item) => {
+    getMergedData()?.forEach((item) => {
       simplifiedPathData[item.id] = {};
       item.neighbors.forEach((item1) => {
         simplifiedPathData[item.id][item1.id] = item1.distance;
@@ -47,10 +47,10 @@ export const findPath = (startPoint, endPoint) => {
     );
 
     // each floor starting and ending point
-    const selectedStartPathFloor_End = mergedData?.find(
+    const selectedStartPathFloor_End = getMergedData()?.find(
       (item) => item.id == startFloorData?.path[startFloorData.path.length - 1],
     );
-    const selectedEndPathFloor_Start = mergedData?.find(
+    const selectedEndPathFloor_Start = getMergedData()?.find(
       (item) => item.id == endFloorData?.path[endFloorData.path.length - 1],
     );
 
