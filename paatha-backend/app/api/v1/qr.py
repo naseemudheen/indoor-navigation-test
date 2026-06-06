@@ -5,6 +5,7 @@ import zipfile
 import qrcode
 from datetime import datetime
 from typing import List, Optional, Any
+from urllib.parse import parse_qs, quote, urlparse
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,8 +13,9 @@ from sqlalchemy.future import select
 from sqlalchemy import delete, or_, and_, func
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import QRLocation, Node, User
+from app.models.models import QRLocation, Node, User, Floor
 from app.schemas.schemas import (
     QRLocationCreate,
     QRLocationUpdate,
@@ -25,30 +27,104 @@ from app.api.deps import require_role
 
 router = APIRouter()
 
-# Helper: Auto-generate sequential QR Code
-async def generate_next_qr_code(db: AsyncSession) -> str:
+def get_block_symbol(block_name: Optional[str], block_id: Optional[int]) -> str:
+    if not block_name:
+        return f"B{block_id or 1}"
+
+    tokens = [
+        token.upper()
+        for token in block_name.replace("-", " ").replace("_", " ").split()
+        if token.strip()
+    ]
+    meaningful_tokens = [token for token in tokens if token not in {"BLOCK", "BLK"}]
+    if meaningful_tokens:
+        token = meaningful_tokens[0]
+        return token if len(token) <= 3 else token[0]
+
+    compact_name = "".join(char for char in block_name.upper() if char.isalnum())
+    return compact_name[:3] or f"B{block_id or 1}"
+
+
+def get_floor_symbol(floor_name: Optional[str], floor_level: Optional[int]) -> str:
+    if floor_level is not None:
+        if floor_level < 0:
+            return "B"
+        if floor_level == 0:
+            return "G"
+        return str(floor_level)
+
+    if not floor_name:
+        return "G"
+
+    normalized_name = floor_name.strip().lower()
+    if "basement" in normalized_name:
+        return "B"
+    if "ground" in normalized_name:
+        return "G"
+    if "first" in normalized_name:
+        return "1"
+    if "second" in normalized_name:
+        return "2"
+    if "third" in normalized_name:
+        return "3"
+
+    compact_name = "".join(char for char in floor_name.upper() if char.isalnum())
+    return compact_name[:2] or "G"
+
+
+def get_qr_number(qr_code: str) -> Optional[int]:
+    try:
+        return int(qr_code.split("-")[-1])
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+def get_qr_scan_payload(qr_code_val: str) -> str:
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    return f"{frontend_url}/directions?qr={quote(qr_code_val)}"
+
+
+def normalize_qr_code_payload(qr_code_val: str) -> str:
+    if not qr_code_val:
+        return qr_code_val
+
+    raw_value = qr_code_val.strip()
+    parsed = urlparse(raw_value)
+    if parsed.scheme and parsed.netloc:
+        query_code = parse_qs(parsed.query).get("qr", [None])[0]
+        if query_code:
+            return query_code.strip()
+
+        path_parts = [part for part in parsed.path.split("/") if part]
+        if len(path_parts) >= 2 and path_parts[-2].lower() == "qr":
+            return path_parts[-1].strip()
+
+    return raw_value
+
+
+# Helper: Auto-generate sequential QR Code in {Block}-{Floor}-{Number} format
+async def generate_next_qr_code(db: AsyncSession, node: Node) -> str:
+    block = node.floor.block if node.floor else None
+    block_symbol = get_block_symbol(block.name if block else None, block.id if block else None)
+    floor_symbol = get_floor_symbol(node.floor.name if node.floor else None, node.floor.level if node.floor else None)
+    code_prefix = f"{block_symbol}-{floor_symbol}"
+
     result = await db.execute(
         select(QRLocation.qr_code)
-        .order_by(QRLocation.qr_code.desc())
-        .limit(1)
+        .where(QRLocation.is_deleted == False)
     )
-    last_code = result.scalar()
-    if not last_code:
-        return "PAADHA-QR-000001"
-    try:
-        # Extract the numeric part of the last code
-        # Assumes format PAADHA-QR-000001
-        num_part = last_code.split("-")[-1]
-        num = int(num_part)
-        return f"PAADHA-QR-{num + 1:06d}"
-    except Exception:
-        # Fallback in case of parsing error
-        return f"PAADHA-QR-{uuid.uuid4().hex[:6].upper()}"
+    existing_numbers = [
+        number
+        for number in (get_qr_number(qr_code) for qr_code in result.scalars().all())
+        if number is not None
+    ]
+    next_number = (max(existing_numbers) + 1) if existing_numbers else 1
+    return f"{code_prefix}-{next_number:03d}"
 
 # Helper: Generate QR PNG Image Bytes in memory
 def generate_qr_png_bytes(qr_code_val: str) -> bytes:
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(qr_code_val)
+    qr.add_data(get_qr_scan_payload(qr_code_val))
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     
@@ -90,12 +166,16 @@ async def create_qr(
     current_user: User = Depends(require_role(["superadmin", "admin", "editor"]))
 ):
     # Verify node exists
-    node_result = await db.execute(select(Node).where(Node.id == qr_in.node_id))
+    node_result = await db.execute(
+        select(Node)
+        .where(Node.id == qr_in.node_id)
+        .options(selectinload(Node.floor).selectinload(Floor.block))
+    )
     node = node_result.scalars().first()
     if not node:
         raise HTTPException(status_code=400, detail="The specified navigation node does not exist.")
         
-    qr_code_val = await generate_next_qr_code(db)
+    qr_code_val = await generate_next_qr_code(db, node)
     image_path = get_qr_image_route(qr_code_val)
     
     qr_loc = QRLocation(
@@ -314,11 +394,12 @@ async def delete_qr(
 # Resolve QR Code
 @router.post("/resolve", response_model=QRResolveResponse)
 async def resolve_qr(payload: QRResolveRequest, db: AsyncSession = Depends(get_db)):
+    qr_code = normalize_qr_code_payload(payload.qr_code)
     result = await db.execute(
         select(QRLocation)
         .where(
             and_(
-                QRLocation.qr_code == payload.qr_code,
+                QRLocation.qr_code == qr_code,
                 QRLocation.is_active == True,
                 QRLocation.is_deleted == False
             )
@@ -350,12 +431,16 @@ async def bulk_generate_qrs(
     qr_locs = []
     for node_id in node_ids:
         # Check node
-        node_result = await db.execute(select(Node).where(Node.id == node_id))
+        node_result = await db.execute(
+            select(Node)
+            .where(Node.id == node_id)
+            .options(selectinload(Node.floor).selectinload(Floor.block))
+        )
         node = node_result.scalars().first()
         if not node:
             continue # Skip invalid nodes
             
-        qr_code_val = await generate_next_qr_code(db)
+        qr_code_val = await generate_next_qr_code(db, node)
         image_path = get_qr_image_route(qr_code_val)
         
         qr_loc = QRLocation(
@@ -391,5 +476,3 @@ async def bulk_generate_qrs(
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=paadha-qrcodes.zip"}
     )
-
-

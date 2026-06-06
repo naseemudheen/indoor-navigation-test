@@ -13,6 +13,7 @@ from app.schemas.schemas import (
     RecalibrationRequest,
     RecalibrationResponse
 )
+from app.api.v1.qr import normalize_qr_code_payload
 
 router = APIRouter()
 
@@ -101,10 +102,11 @@ async def create_guest_session(payload: GuestSessionCreate, db: AsyncSession = D
 @router.post("/recalibrate", response_model=RecalibrationResponse)
 async def recalibrate_navigation(payload: RecalibrationRequest, db: AsyncSession = Depends(get_db)):
     # 1. Resolve QR Code
+    qr_code = normalize_qr_code_payload(payload.qr_code)
     qr_result = await db.execute(
         select(QRLocation)
         .where(
-            QRLocation.qr_code == payload.qr_code,
+            QRLocation.qr_code == qr_code,
             QRLocation.is_active == True,
             QRLocation.is_deleted == False
         )

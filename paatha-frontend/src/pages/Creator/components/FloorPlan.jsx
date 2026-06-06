@@ -17,6 +17,7 @@ import {
   renderTimerRight
 } from "./TimeRenderer";
 import { IconMap } from "../../../constants/iconMap";
+import QRCreateModal from "../../../components/QRCreateModal";
 
 function getAngle(c, l) {
   let delta_x = l.x - c.x;
@@ -87,6 +88,60 @@ export default function Floorplan({
   const [slice,setSlice] = useState([]);
   const [selectedNodeDetail, setSelectedNodeDetail] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [qrLocations, setQrLocations] = useState([]);
+  const [loadingQr, setLoadingQr] = useState(false);
+  const [showCreateQrModal, setShowCreateQrModal] = useState(false);
+  const [showPreviewQr, setShowPreviewQr] = useState(null);
+
+  const fetchQrLocations = React.useCallback(async () => {
+    setLoadingQr(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/qr?size=500");
+      if (res.ok) {
+        const data = await res.json();
+        setQrLocations(data.items || []);
+      } else {
+        setQrLocations([]);
+      }
+    } catch (err) {
+      console.error("Error fetching QR locations:", err);
+      setQrLocations([]);
+    } finally {
+      setLoadingQr(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchQrLocations();
+  }, [fetchQrLocations]);
+
+  const getQrForNode = React.useCallback(
+    (nodeId) => qrLocations.find((item) => item.node_id === nodeId),
+    [qrLocations]
+  );
+
+  const handleDetachQr = async (qrId) => {
+    if (!window.confirm("Are you sure you want to delete this QR mapping?")) return;
+    try {
+      const token = localStorage.getItem("paatha_token");
+      const res = await fetch(`http://localhost:8000/api/qr/${qrId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setShowPreviewQr(null);
+        fetchQrLocations();
+      } else {
+        alert("Failed to delete QR mapping.");
+      }
+    } catch (err) {
+      console.error("Error detaching QR:", err);
+      alert("An error occurred while deleting QR mapping.");
+    }
+  };
+
   React.useEffect(() => {
     if (!isGettingInitialState) {
     const defaultZoomLevel = 3; // Change this to your desired default zoom level
@@ -724,6 +779,72 @@ console.log(trans,4534);
       .on("mouseout", function (event, data) {
         setHoveredNode(null);
       });
+
+    D3SVG.selectAll(".qr-node-ring")
+      .data(pathData.filter((item) => getQrForNode(item.id)), (value) => value.id)
+      .join("circle")
+      .attr("class", "qr-node-ring")
+      .attr("r", (value) => {
+        if (selectedStartPath === value.id || selectedEndPath === value.id) {
+          return sizeScale(5.0);
+        }
+        return value.isSearchable ? sizeScale(5.2) : sizeScale(3.6);
+      })
+      .attr("fill", "none")
+      .attr("stroke", "#f59e0b")
+      .attr("stroke-width", sizeScale(0.8))
+      .attr("stroke-dasharray", `${sizeScale(1.4)} ${sizeScale(0.9)}`)
+      .attr(
+        "cx",
+        (value) =>
+          getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            value.coordinates[0],
+            value.coordinates[1]
+          )[0]
+      )
+      .attr(
+        "cy",
+        (value) =>
+          getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            value.coordinates[0],
+            value.coordinates[1]
+          )[1]
+      )
+      .style("pointer-events", "none");
+
+    D3SVG.selectAll(".qr-node-label")
+      .data(pathData.filter((item) => getQrForNode(item.id)), (value) => value.id)
+      .join("text")
+      .attr("class", "qr-node-label")
+      .attr("x", (value) =>
+        getRealPointCoordinateRelativeToDigitisationZone(
+          digitisationZone,
+          currentRotation,
+          value.coordinates[0],
+          value.coordinates[1]
+        )[0] + sizeScale(4.2)
+      )
+      .attr("y", (value) =>
+        getRealPointCoordinateRelativeToDigitisationZone(
+          digitisationZone,
+          currentRotation,
+          value.coordinates[0],
+          value.coordinates[1]
+        )[1] - sizeScale(4.2)
+      )
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr("font-size", `${sizeScale(3.2)}px`)
+      .attr("font-weight", "800")
+      .attr("fill", "#92400e")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", sizeScale(0.25))
+      .style("pointer-events", "none")
+      .text("QR");
   }, [
     isGettingInitialState,
     floorplan,
@@ -731,6 +852,8 @@ console.log(trans,4534);
     currentRotation,
     pathData,
     selectedStartPath,
+    selectedEndPath,
+    getQrForNode,
   ]);
 
   // render markers
@@ -850,6 +973,7 @@ console.log(trans,4534);
   }, [currentIndex, selectPath, digitisationZone, currentRotation]);
 
   const activeNodeToShow = hoveredNode || selectedNodeDetail;
+  const activeNodeQr = activeNodeToShow ? getQrForNode(activeNodeToShow.id) : null;
   
   return(
          <div id="floorplan-container">
@@ -928,6 +1052,95 @@ console.log(trans,4534);
                 {activeNodeToShow.neighbors?.map((item, index) => (
                   <span key={index} className="node-neighbor-item">{item?.id}</span>
                 ))}
+              </div>
+            </div>
+            <div className="node-neighbors" style={{ borderTop: "1px solid #f1f5f9", marginTop: "12px", paddingTop: "12px" }}>
+              <strong>QR Code Mapping:</strong>
+              {loadingQr ? (
+                <div style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "6px" }}>Checking QR mapping...</div>
+              ) : activeNodeQr ? (
+                <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#059669", fontSize: "0.8rem" }}>{activeNodeQr.qr_code}</span>
+                    <span style={{ fontSize: "0.65rem", backgroundColor: "#fef3c7", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold", color: "#92400e" }}>
+                      QR MAPPED
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#475569" }}>
+                    <strong>Name: </strong>{activeNodeQr.name}
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreviewQr(activeNodeQr)}
+                      style={{ flex: 1, padding: "5px 10px", fontSize: "0.75rem", backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "6px", color: "#2563eb", fontWeight: "600", cursor: "pointer" }}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDetachQr(activeNodeQr.id)}
+                      style={{ flex: 1, padding: "5px 10px", fontSize: "0.75rem", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "6px", color: "#dc2626", fontWeight: "600", cursor: "pointer" }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: "8px" }}>
+                  <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginBottom: "8px" }}>No QR Code mapped.</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateQrModal(true)}
+                    style={{ padding: "8px 12px", fontSize: "0.75rem", backgroundColor: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "6px", color: "#059669", fontWeight: "600", width: "100%", cursor: "pointer" }}
+                  >
+                    Generate QR Code
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showCreateQrModal && activeNodeToShow && (
+          <QRCreateModal
+            nodes={pathData}
+            prefilledNodeId={activeNodeToShow.id}
+            onClose={() => setShowCreateQrModal(false)}
+            onSuccess={() => {
+              setShowCreateQrModal(false);
+              fetchQrLocations();
+            }}
+          />
+        )}
+
+        {showPreviewQr && (
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000 }}>
+            <div style={{ backgroundColor: "#fff", padding: "24px", borderRadius: "16px", maxWidth: "340px", width: "100%", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "8px", marginBottom: "12px" }}>
+                <h4 style={{ margin: 0, fontWeight: "bold", fontSize: "0.9rem", color: "#0f172a" }}>QR Code Preview</h4>
+                <button
+                  onClick={() => setShowPreviewQr(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.2rem", color: "#94a3b8", padding: 0, lineHeight: 1 }}
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "12px", backgroundColor: "#fff", width: "160px", margin: "0 auto 12px" }}>
+                <img
+                  src={`http://localhost:8000${showPreviewQr.image_path}`}
+                  alt={showPreviewQr.qr_code}
+                  style={{ width: "100%", height: "auto" }}
+                />
+              </div>
+
+              <div>
+                <h5 style={{ margin: "4px 0", fontWeight: "bold", color: "#0f172a", fontSize: "0.85rem" }}>{showPreviewQr.name}</h5>
+                <p style={{ margin: "4px 0", fontWeight: "bold", color: "#059669", fontSize: "0.75rem", fontFamily: "monospace" }}>{showPreviewQr.qr_code}</p>
+                <p style={{ margin: "4px 0", fontSize: "0.7rem", color: "#64748b" }}>
+                  Node: {showPreviewQr.node_id} | Type: {showPreviewQr.qr_type}
+                </p>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { IoCloseOutline, IoCameraOutline } from "react-icons/io5";
+import { extractQrCodePayload } from "../utils/qr";
 
 const QRScanner = ({ onScanSuccess, onClose }) => {
   const [activeTab, setActiveTab] = useState("camera"); // "camera" | "manual"
@@ -57,7 +58,7 @@ const QRScanner = ({ onScanSuccess, onClose }) => {
           (decodedText) => {
             // Successfully scanned QR Code
             stopScanner();
-            onScanSuccess(decodedText);
+            onScanSuccess(extractQrCodePayload(decodedText));
           },
           (errorMessage) => {
             // Quietly handle scan failure (polling)
@@ -92,7 +93,7 @@ const QRScanner = ({ onScanSuccess, onClose }) => {
   };
 
   const handleManualSelect = (qrCode) => {
-    onScanSuccess(qrCode);
+    onScanSuccess(extractQrCodePayload(qrCode));
   };
 
   return (

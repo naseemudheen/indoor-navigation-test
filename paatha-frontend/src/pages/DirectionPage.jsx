@@ -42,6 +42,7 @@ import {
 } from "../redux/mapSlice";
 import { getNaturalImageDimensions } from "../utils/helper";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "../utils";
+import { extractQrCodePayload } from "../utils/qr";
 // import {
 //   newGround,
 //   undergroundLabels,
@@ -292,10 +293,13 @@ const DirectionPage = () => {
   const [errMessage, setErrorMessage] = useState(false);
   const svgElementRef = React.useRef(null);
   const [iconData, setIconData] = useState([]);
-  let { state } = useLocation();
+  const location = useLocation();
+  let { state } = location;
   const [showScanner, setShowScanner] = useState(false);
+  const handledInitialQrRef = useRef(false);
 
   const handleScanSuccess = async (qrCode) => {
+    const normalizedQrCode = extractQrCodePayload(qrCode);
     setShowScanner(false);
     try {
       const res = await fetch("http://localhost:8000/api/qr/resolve", {
@@ -303,7 +307,7 @@ const DirectionPage = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ qr_code: qrCode }),
+        body: JSON.stringify({ qr_code: normalizedQrCode }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -328,6 +332,16 @@ const DirectionPage = () => {
       alert("Error contacting QR resolve API.");
     }
   };
+
+  useEffect(() => {
+    if (handledInitialQrRef.current) return;
+
+    const qrCode = new URLSearchParams(location.search).get("qr");
+    if (!qrCode) return;
+
+    handledInitialQrRef.current = true;
+    handleScanSuccess(qrCode);
+  }, [location.search]);
 
   const svgZoomRef = React.useRef(
     zoom().on("zoom", (event) => {

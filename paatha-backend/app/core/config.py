@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     ALGORITHM: str = "HS256"
 
+    # Public frontend URL used inside printed QR codes.
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
     class Config:
         env_file = ".env"
         case_sensitive = True
