@@ -873,22 +873,18 @@ const DirectionFloor = ({
         .data([coordinatesData])
         .join("path")
         .attr("class", "path-line-selected3 relative z-10")
-        .attr("stroke", (value, index) => {
-          return "#4ccca7";
-        })
-        .attr("stroke-width", sizeScale(3))
+        .attr("stroke", "#4ccca7")
+        .attr("stroke-width", sizeScale(9))
         .attr("fill", "transparent")
         // .attr("d", updateLine)
         .attr("d", (value) => polygonWithRoundedCorners(coordinatesData, 5));
-      // console.log(newselectedpath.length,coordinatesData.length);
+      // Inner layer — original #BFE4DA tone from main branch
       D3SVG.selectAll(".path-line-selected2")
         .data([coordinatesData])
         .join("path")
         .attr("class", "path-line-selected2 relative z-20")
-        .attr("stroke", (value, index) => {
-          return "#BFE4DA";
-        })
-        .attr("stroke-width", sizeScale(2))
+        .attr("stroke", "#BFE4DA")
+        .attr("stroke-width", sizeScale(7))
         .attr("fill", "transparent")
         // .attr("d", updateLine)
         .attr("d", (value) => polygonWithRoundedCorners(coordinatesData, 5));

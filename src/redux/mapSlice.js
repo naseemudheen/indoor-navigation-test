@@ -8,7 +8,13 @@ export const fetchMapData = createAsyncThunk(
       if (!response.ok) {
         throw new Error("Failed to fetch map data");
       }
-      return await response.json();
+      const data = await response.json();
+      // Normalize: add floor: 0 to every node so path-finding logic works correctly
+      const normalizedNodes = (data.nodes || []).map((node) => ({
+        ...node,
+        floor: node.floor !== undefined ? node.floor : 0,
+      }));
+      return { ...data, nodes: normalizedNodes };
     } catch (error) {
       return rejectWithValue(error.message);
     }

@@ -212,6 +212,8 @@ const NavigationPage = () => {
   const { mapData } = useSelector((state) => state.map);
   const groundData = mapData?.nodes || [];
   const markerData = mapData?.markers || [];
+  // mergedData is derived from Redux mapData so it is always fresh
+  const mergedData = groundData;
   const [turningPoint, setTurningPoint] = useState();
   const initialFloor = useSelector((state) => state.map.initialPath);
   const intermediateFloor = useSelector((state) => state.map.intermediatePath);
@@ -274,9 +276,10 @@ const NavigationPage = () => {
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
   const [pathData, setPathData] = useState([]);
 
+  // Keep pathData in sync with Redux mapData whenever data or floor changes
   useEffect(() => {
-    if (mapData && floor === 0) {
-      setPathData(mapData.nodes || []);
+    if (mapData?.nodes?.length > 0 && floor === 0) {
+      setPathData(mapData.nodes);
     }
   }, [mapData, floor]);
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
@@ -493,7 +496,7 @@ const NavigationPage = () => {
         // });
         // setUnitsData([]);
         if (floor === 0) {
-          setPathData(groundData);
+          setPathData(getMergedData());
           setUnitsData([]);
           setIconData([]);
           setLowLabels([]);
@@ -604,7 +607,7 @@ const NavigationPage = () => {
       handleClick(-1);
       setLowLabels(undergroundLabels);
     } else if (type === 0) {
-      setPathData(groundData);
+      setPathData(getMergedData());
       setUnitsData([]);
       setIconData([]);
       setLowLabels([]);

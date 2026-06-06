@@ -13,7 +13,7 @@ const FloorSwitcher = memo(
 
     return (
       <div
-        className={`w-fit bg-white rounded-[16px] flex flex-col items-center fixed ${bottomSpace} shadow-[0_2px_3px_1px_rgba(0,0,0,0.3)] left-[1rem] lg:left-[25rem] `}
+        className={`w-fit bg-white rounded-[16px] flex flex-col items-center fixed ${bottomSpace} shadow-[0_2px_3px_1px_rgba(0,0,0,0.3)] left-3`}
       >
         <div
           className={`px-3 py-1 hover:bg-[#29ab8665] text-[#000000b6] rounded-t-[16px] w-full text-center h-full flex justify-center floor-prev`}

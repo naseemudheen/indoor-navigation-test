@@ -273,9 +273,10 @@ const DirectionPage = () => {
   const [selectedFocusView, setSelectedFocusView] = React.useState(null);
   const [pathData, setPathData] = React.useState([]);
 
+  // Keep pathData in sync with Redux mapData (ground floor = nodes from API)
   useEffect(() => {
-    if (mapData && floor === 0) {
-      setPathData(mapData.nodes || []);
+    if (mapData?.nodes?.length > 0 && floor === 0) {
+      setPathData(mapData.nodes);
     }
   }, [mapData, floor]);
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
@@ -394,7 +395,7 @@ const DirectionPage = () => {
         // });
         // setUnitsData([]);
         if (floor === 0) {
-          setPathData(groundData);
+          setPathData(getMergedData());
           setUnitsData([]);
           setIconData([]);
           setLowLabels([]);
@@ -516,7 +517,7 @@ const DirectionPage = () => {
       setLowLabels(undergroundLabels);
       setHighLabels(Labels);
     } else if (type === 0) {
-      setPathData(groundData);
+      setPathData(getMergedData());
       setUnitsData([]);
       setIconData([]);
       setLowLabels([]);
@@ -828,7 +829,9 @@ const DirectionPage = () => {
       // merged path data
       handleSendCoordinates();
       
-      const result2 = findPath2(selectedStartPath, selectedEndPath, mergedData);
+      // Use getMergedData() to get the latest nodes from Redux store
+      const currentMerged = getMergedData();
+      const result2 = findPath2(selectedStartPath, selectedEndPath, currentMerged);
       console.log(result2);
 
       // separate path based on floors
@@ -839,8 +842,8 @@ const DirectionPage = () => {
       const floorPaths = pathWithFloors.map(({ floor, path }) => ({
         floor,
         fullPath: path,
-        start: mergedData.find((item) => item.id === path[0]), // First element
-        end: mergedData.find((item) => item.id === path[path.length - 1]), // Last element
+        start: currentMerged.find((item) => item.id === path[0]), // First element
+        end: currentMerged.find((item) => item.id === path[path.length - 1]), // Last element
       }));
 
       //each floor separated paths
@@ -852,11 +855,11 @@ const DirectionPage = () => {
       );
 
       // each floor starting and ending point
-      const selectedStartPathFloor_End = mergedData?.find(
+      const selectedStartPathFloor_End = currentMerged?.find(
         (item) =>
           item.id == startFloorData?.path[startFloorData.path.length - 1],
       );
-      const selectedEndPathFloor_Start = mergedData?.find(
+      const selectedEndPathFloor_Start = currentMerged?.find(
         (item) => item.id == endFloorData?.path[0],
       );
 
@@ -940,7 +943,7 @@ const DirectionPage = () => {
     // if (selectedEndPath?.floor !== selectedStartPath?.floor) {
     //   if (floor === selectedStartPath?.floor) {
     //     console.log(initialFloor);
-
+    //
     //     console.log("worked");
     //     console.log(totalSelectedPath);
     //     setSelectedPath(initialFloor?.path);
@@ -952,6 +955,7 @@ const DirectionPage = () => {
   }, [
     selectedStartPath,
     selectedEndPath,
+    mapData, // re-run if map data loads after selection
     // totalSelectedPath,
     floor,
   ]);

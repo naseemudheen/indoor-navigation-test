@@ -263,7 +263,7 @@ export default function Floorplan({
         const pointerLayer = select("#layer-pointer");
         
         const currentZoom = trans?.k || 1;
-        const baseSize = 40;
+        const baseSize = 32;
         const scaledSize = currentZoom > 2 ? baseSize / currentZoom * 2 : baseSize;
         const offset = -scaledSize / 2;
 
@@ -1179,22 +1179,19 @@ export default function Floorplan({
       .data([coordinatesData])
       .join("path")
       .attr("class", "path-line-selected3 relative z-10")
-      .attr("stroke", (value, index) => {
-        return "#4ccca7";
-      })
-      .attr("stroke-width", sizeScale(3))
+      .attr("stroke", "#4ccca7")
+      .attr("stroke-width", sizeScale(9))
       .attr("fill", "transparent")
       .attr("stroke-linecap", "round")
       .attr("stroke-linejoin", "round")
       .attr("d", fullPathString);
+    // Inner layer — original #BFE4DA tone from main branch
     D3SVG.selectAll(".path-line-selected2")
       .data([coordinatesData])
       .join("path")
       .attr("class", "path-line-selected2 relative z-20")
-      .attr("stroke", (value, index) => {
-        return "#BFE4DA";
-      })
-      .attr("stroke-width", sizeScale(2))
+      .attr("stroke", "#BFE4DA")
+      .attr("stroke-width", sizeScale(7))
       .attr("fill", "transparent")
       .attr("stroke-linecap", "round")
       .attr("stroke-linejoin", "round")
@@ -1308,7 +1305,7 @@ export default function Floorplan({
       .join("path")
       .attr("class", "path-line-selected relative z-10")
       .attr("stroke", "#29AB87")
-      .attr("stroke-width", sizeScale(2))
+      .attr("stroke-width", sizeScale(5))
       .attr("fill", "transparent")
       .attr("stroke-linecap", "round")
       .attr("stroke-linejoin", "round")
