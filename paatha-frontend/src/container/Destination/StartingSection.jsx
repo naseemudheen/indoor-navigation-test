@@ -54,7 +54,7 @@ const StartingSection = ({
         </h4>
         <p className="text-[#00000099] font-semibold">
           {Math.floor(Math.floor(distance) / 82)} minutes{" "}
-          <span className="font-medium">({Math.floor(distance) || 0} mtr)</span>
+          <span className="font-medium">({(distance != null ? parseFloat(distance).toFixed(2) : "0.00")} mtr)</span>
         </p>
         <div className="flex items-center gap-4 mt-4">
           <Link

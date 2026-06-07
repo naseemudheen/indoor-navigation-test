@@ -12,6 +12,7 @@ import Floorplan from "../components/Floorplan";
 import { getNaturalImageDimensions } from "../utils/helper";
 import { RxTriangleLeft, RxTriangleRight } from "react-icons/rx";
 import { ActionIcon } from "../components/Icons";
+import { convertSvgDistanceToMeters } from "../config";
 // import Labels from "../label.json";
 // import {
 //   newGround,
@@ -982,7 +983,7 @@ console.log(finalFloor);
       }
     });
 
-    setRemainingDistance(totalDist / 0.002198);
+    setRemainingDistance(convertSvgDistanceToMeters(totalDist));
   }, [count, floor, state?.path]);
   useEffect(() => {
     function getFloorsBetween(floors, start, end) {
@@ -1193,7 +1194,7 @@ console.log(finalFloor);
             <p className="text-[#00000099] font-semibold">
               {Math.max(0, Math.floor(remainingDistance / 82))} minutes{" "}
               <span className="font-medium">
-                ({Math.max(0, Math.round(remainingDistance))} mtr)
+                ({Math.max(0, remainingDistance).toFixed(2)} mtr)
               </span>
             </p>
             <p className="flex items-center text-xs text-[#00000066]">

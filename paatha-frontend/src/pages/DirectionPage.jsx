@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { DestinationSection } from "../container/Destination";
 import StartingSection from "../container/Destination/StartingSection";
 import { useLocation } from "react-router-dom";
-import { BACKEND_URL } from "../config";
+import { BACKEND_URL, convertSvgDistanceToMeters } from "../config";
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import simpleFloor from "../assets/floors/simple.svg";
@@ -929,7 +929,7 @@ const DirectionPage = () => {
       // calculate total distance
       const totalDistance = calculateDistance(result2);
 
-      setDistance(totalDistance / 0.002198);
+      setDistance(convertSvgDistanceToMeters(totalDistance));
       setSelectedPath(
         pathWithFloors.find((item) => item.floor === selectedStartPath.floor)
           ?.path,

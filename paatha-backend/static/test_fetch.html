@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Fetch API</title>
+</head>
+<body>
+    <h1>Testing Map Sync API</h1>
+    <div id="status">Running tests...</div>
+    <pre id="output"></pre>
+
+    <script>
+        async function runTest() {
+            const out = document.getElementById("output");
+            const status = document.getElementById("status");
+
+            try {
+                // 1. Login
+                out.textContent += "1. Logging in...\n";
+                const loginForm = new URLSearchParams();
+                loginForm.append("username", "admin@gmail.com");
+                loginForm.append("password", "admin");
+
+                const loginRes = await fetch("/api/v1/auth/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: loginForm
+                });
+
+                if (!loginRes.ok) {
+                    throw new Error("Login failed: " + await loginRes.text());
+                }
+
+                const loginData = await loginRes.json();
+                out.textContent += "Login success! Token retrieved.\n\n";
+                const token = loginData.access_token;
+
+                // 2. Fetch existing nodes first (if any)
+                out.textContent += "2. Fetching current map data...\n";
+                const currentRes = await fetch("/api/v1/map/data/1");
+                const currentData = await currentRes.json();
+                out.textContent += "Current nodes count: " + currentData.nodes.length + "\n\n";
+
+                // 3. Create a payload for sync
+                // We'll prepare a nodes payload with a test node
+                out.textContent += "3. Sending Sync payload...\n";
+                const payload = {
+                    nodes: [
+                        {
+                            id: "G-001",
+                            coordinates: [100, 200],
+                            name: "Main Entrance",
+                            isSearchable: true,
+                            neighbors: []
+                        },
+                        {
+                            id: "G-002",
+                            coordinates: [150, 250],
+                            name: "Elevator G",
+                            isSearchable: true,
+                            neighbors: [
+                                {
+                                    id: "G-001",
+                                    coordinates: [100, 200],
+                                    distance: 70.7,
+                                    isParent: false
+                                }
+                            ]
+                        }
+                    ],
+                    markers: [
+                        {
+                            id: "marker-123",
+                            type: "label",
+                            text: "Welcome",
+                            coordinates: [120, 220],
+                            iconType: null
+                        }
+                    ]
+                };
+
+                const syncRes = await fetch("/api/v1/map/sync/1", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const syncText = await syncRes.text();
+                out.textContent += "Sync Response status: " + syncRes.status + "\n";
+                out.textContent += "Sync Response body: " + syncText + "\n\n";
+
+                if (syncRes.ok) {
+                    status.textContent = "SUCCESS!";
+                    status.style.color = "green";
+                } else {
+                    status.textContent = "FAILED!";
+                    status.style.color = "red";
+                }
+
+            } catch (err) {
+                out.textContent += "Error: " + err.message + "\n";
+                status.textContent = "FAILED!";
+                status.style.color = "red";
+            }
+        }
+
+        runTest();
+    </script>
+</body>
+</html>
