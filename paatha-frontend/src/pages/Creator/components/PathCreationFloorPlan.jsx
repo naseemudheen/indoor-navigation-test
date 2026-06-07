@@ -21,9 +21,16 @@ export default function Floorplan({
   currentRotation,
   togglePathCreation,
   setPath,
-  floorPrefix = "G-"
+  floorPrefix = "G-",
+  qrLocations = [],
+  loadingQr = false,
+  fetchQrLocations
 }) {
   const [pathData, setPathData] = React.useState([]);
+  const getQrForNode = React.useCallback(
+    (nodeId) => qrLocations.find((item) => item.node_id === nodeId),
+    [qrLocations]
+  );
   const [currentSelectedPathPoint, setCurrentSelectedPathPoint] =
     React.useState("");
   const [detailedSelectedPoint, setDetailedSelectedPoint] = useState({});
@@ -516,6 +523,83 @@ export default function Floorplan({
       .on("mouseout", function (event, data) {
         setHoveredNode(null);
       });
+    D3SVG.selectAll(".qr-node-ring")
+      .data(pathData.filter((item) => getQrForNode(item.id)), (value) => value.id)
+      .join("circle")
+      .attr("class", "qr-node-ring")
+      .attr("r", (value) => {
+        if (currentSelectedPathPoint === value.id) {
+          return sizeScale(5.5);
+        }
+        return value.isSearchable ? sizeScale(5.2) : sizeScale(3.6);
+      })
+      .attr("fill", "none")
+      .attr("stroke", "#f59e0b")
+      .attr("stroke-width", sizeScale(0.8))
+      .attr("stroke-dasharray", `${sizeScale(1.4)} ${sizeScale(0.9)}`)
+      .attr(
+        "cx",
+        (value) =>
+          getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            value.coordinates[0],
+            value.coordinates[1]
+          )[0]
+      )
+      .attr(
+        "cy",
+        (value) =>
+          getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            currentRotation,
+            value.coordinates[0],
+            value.coordinates[1]
+          )[1]
+      )
+      .style("pointer-events", "none");
+
+    D3SVG.selectAll(".path-node-id-label")
+      .data(pathData, (value) => value.id)
+      .join("text")
+      .attr("class", "path-node-id-label")
+      .attr("x", (value) =>
+        getRealPointCoordinateRelativeToDigitisationZone(
+          digitisationZone,
+          currentRotation,
+          value.coordinates[0],
+          value.coordinates[1]
+        )[0] + sizeScale(4.2)
+      )
+      .attr("y", (value) =>
+        getRealPointCoordinateRelativeToDigitisationZone(
+          digitisationZone,
+          currentRotation,
+          value.coordinates[0],
+          value.coordinates[1]
+        )[1] - sizeScale(1.0)
+      )
+      .attr("text-anchor", "start")
+      .attr("dominant-baseline", "middle")
+      .attr("font-size", `${sizeScale(3.0)}px`)
+      .attr("font-weight", "600")
+      .style("pointer-events", "none")
+      .each(function(value) {
+        const hasQr = getQrForNode(value.id);
+        const textNode = select(this);
+        textNode.selectAll("*").remove(); // clear old tspans
+        textNode.append("tspan")
+          .text(value.id)
+          .attr("fill", "#1e293b");
+        if (hasQr) {
+          textNode.append("tspan")
+            .text(" (QR)")
+            .attr("fill", "#16a34a")
+            .attr("font-size", `${sizeScale(2.6)}px`)
+            .attr("font-weight", "500");
+        }
+      });
+
   }, [
     isGettingInitialState,
     floorplan,
@@ -526,6 +610,8 @@ export default function Floorplan({
     isJoinMode,
     isDeleteMode,
     isSplitMode,
+    getQrForNode,
+    qrLocations
   ]);
   console.log(previouslySelectedPoint, "prev");
   console.log(detailedSelectedPoint, "now");

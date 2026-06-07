@@ -6,7 +6,7 @@
   "scripts": {
     "install-frontend": "npm install --prefix paatha-frontend",
     "dev:frontend": "npm --prefix paatha-frontend run dev",
-    "dev:backend": "paatha-backend/venv/bin/uvicorn main:app --reload --app-dir paatha-backend --port 8000",
+    "dev:backend": "paatha-backend/venv/bin/uvicorn main:app --reload --app-dir paatha-backend --host 0.0.0.0 --port 8000",
     "dev": "concurrently --names \"frontend,backend\" -c \"cyan,green\" \"npm:dev:frontend\" \"npm:dev:backend\""
   },
   "devDependencies": {

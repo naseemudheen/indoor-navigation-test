@@ -5,6 +5,7 @@ import {
   zoom,
   zoomIdentity
 } from "d3";
+import { BACKEND_URL } from "../../../config";
 
 import {
   lerp,
@@ -78,7 +79,10 @@ export default function Floorplan({
   selectedEndPath,
   zoomToUnit,
   selectedPath,
-  markerData
+  markerData,
+  qrLocations = [],
+  loadingQr = false,
+  fetchQrLocations
 }) {
   const [trans,setTrans]=useState(null)
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -88,32 +92,8 @@ export default function Floorplan({
   const [slice,setSlice] = useState([]);
   const [selectedNodeDetail, setSelectedNodeDetail] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
-  const [qrLocations, setQrLocations] = useState([]);
-  const [loadingQr, setLoadingQr] = useState(false);
   const [showCreateQrModal, setShowCreateQrModal] = useState(false);
   const [showPreviewQr, setShowPreviewQr] = useState(null);
-
-  const fetchQrLocations = React.useCallback(async () => {
-    setLoadingQr(true);
-    try {
-      const res = await fetch("http://localhost:8000/api/qr?size=500");
-      if (res.ok) {
-        const data = await res.json();
-        setQrLocations(data.items || []);
-      } else {
-        setQrLocations([]);
-      }
-    } catch (err) {
-      console.error("Error fetching QR locations:", err);
-      setQrLocations([]);
-    } finally {
-      setLoadingQr(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchQrLocations();
-  }, [fetchQrLocations]);
 
   const getQrForNode = React.useCallback(
     (nodeId) => qrLocations.find((item) => item.node_id === nodeId),
@@ -124,7 +104,7 @@ export default function Floorplan({
     if (!window.confirm("Are you sure you want to delete this QR mapping?")) return;
     try {
       const token = localStorage.getItem("paatha_token");
-      const res = await fetch(`http://localhost:8000/api/qr/${qrId}`, {
+      const res = await fetch(`${BACKEND_URL}/api/qr/${qrId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -816,10 +796,12 @@ console.log(trans,4534);
       )
       .style("pointer-events", "none");
 
-    D3SVG.selectAll(".qr-node-label")
-      .data(pathData.filter((item) => getQrForNode(item.id)), (value) => value.id)
+    D3SVG.selectAll(".qr-node-label").remove();
+
+    D3SVG.selectAll(".path-node-id-label")
+      .data(pathData, (value) => value.id)
       .join("text")
-      .attr("class", "qr-node-label")
+      .attr("class", "path-node-id-label")
       .attr("x", (value) =>
         getRealPointCoordinateRelativeToDigitisationZone(
           digitisationZone,
@@ -834,17 +816,28 @@ console.log(trans,4534);
           currentRotation,
           value.coordinates[0],
           value.coordinates[1]
-        )[1] - sizeScale(4.2)
+        )[1] - sizeScale(1.0)
       )
-      .attr("text-anchor", "middle")
+      .attr("text-anchor", "start")
       .attr("dominant-baseline", "middle")
-      .attr("font-size", `${sizeScale(3.2)}px`)
-      .attr("font-weight", "800")
-      .attr("fill", "#92400e")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", sizeScale(0.25))
+      .attr("font-size", `${sizeScale(3.0)}px`)
+      .attr("font-weight", "600")
       .style("pointer-events", "none")
-      .text("QR");
+      .each(function(value) {
+        const hasQr = getQrForNode(value.id);
+        const textNode = select(this);
+        textNode.selectAll("*").remove(); // clear old tspans
+        textNode.append("tspan")
+          .text(value.id)
+          .attr("fill", "#1e293b");
+        if (hasQr) {
+          textNode.append("tspan")
+            .text(" (QR)")
+            .attr("fill", "#16a34a")
+            .attr("font-size", `${sizeScale(2.6)}px`)
+            .attr("font-weight", "500");
+        }
+      });
   }, [
     isGettingInitialState,
     floorplan,
@@ -854,6 +847,7 @@ console.log(trans,4534);
     selectedStartPath,
     selectedEndPath,
     getQrForNode,
+    qrLocations
   ]);
 
   // render markers
@@ -1129,7 +1123,7 @@ console.log(trans,4534);
 
               <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "12px", backgroundColor: "#fff", width: "160px", margin: "0 auto 12px" }}>
                 <img
-                  src={`http://localhost:8000${showPreviewQr.image_path}`}
+                  src={`${BACKEND_URL}${showPreviewQr.image_path}`}
                   alt={showPreviewQr.qr_code}
                   style={{ width: "100%", height: "auto" }}
                 />

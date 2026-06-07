@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setToken } from "../../utils/auth";
+import { BACKEND_URL } from "../../config";
 import "./LoginPage.css";
 
 const LoginPage = () => {
@@ -18,7 +19,7 @@ const LoginPage = () => {
       formData.append("username", username);
       formData.append("password", password);
 
-      const response = await fetch("http://localhost:8000/api/v1/auth/login", {
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { IoCloseOutline, IoLocateOutline, IoAlertCircleOutline } from "react-icons/io5";
 import QRScanner from "./QRScanner";
+import { BACKEND_URL } from "../config";
 
 const NavigationRecalibrationModal = ({ sessionId, onClose, onRecalibrated }) => {
   const [scanning, setScanning] = useState(false);
@@ -13,7 +14,7 @@ const NavigationRecalibrationModal = ({ sessionId, onClose, onRecalibrated }) =>
     setErrorMsg(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/navigation/recalibrate", {
+      const res = await fetch(`${BACKEND_URL}/api/navigation/recalibrate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -26,7 +27,15 @@ const NavigationRecalibrationModal = ({ sessionId, onClose, onRecalibrated }) =>
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.detail || "Recalibration failed. Invalid QR code.");
+        let errMsg = "Recalibration failed. Invalid QR code.";
+        if (typeof errData.detail === "string") {
+          errMsg = errData.detail;
+        } else if (Array.isArray(errData.detail)) {
+          errMsg = errData.detail.map((err) => `${err.loc.join(".")}: ${err.msg}`).join(", ");
+        } else if (errData.detail && typeof errData.detail === "object") {
+          errMsg = JSON.stringify(errData.detail);
+        }
+        throw new Error(errMsg);
       }
 
       const data = await res.json();

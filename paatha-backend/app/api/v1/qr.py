@@ -203,7 +203,7 @@ async def list_qrs(
     qr_type: Optional[str] = None,
     is_active: Optional[bool] = None,
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
+    size: int = Query(20, ge=1, le=1000),
     db: AsyncSession = Depends(get_db)
 ):
     query = select(QRLocation).where(QRLocation.is_deleted == False).options(selectinload(QRLocation.node))

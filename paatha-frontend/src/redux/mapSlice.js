@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { BACKEND_URL } from "../config";
 
 export const fetchMapData = createAsyncThunk(
   "map/fetchMapData",
   async (floorId, { rejectWithValue }) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/map/data/${floorId}`);
+      const response = await fetch(`${BACKEND_URL}/api/v1/map/data/${floorId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch map data");
       }

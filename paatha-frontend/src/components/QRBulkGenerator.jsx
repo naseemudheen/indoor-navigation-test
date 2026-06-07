@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { IoCloseOutline, IoCheckmarkCircleOutline } from "react-icons/io5";
+import { BACKEND_URL } from "../config";
 
 const QRBulkGenerator = ({ nodes, onClose, onSuccess }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,7 +45,7 @@ const QRBulkGenerator = ({ nodes, onClose, onSuccess }) => {
 
     try {
       const token = localStorage.getItem("paatha_token");
-      const res = await fetch("http://localhost:8000/api/qr/bulk-generate", {
+      const res = await fetch(`${BACKEND_URL}/api/qr/bulk-generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

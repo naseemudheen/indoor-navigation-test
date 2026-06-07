@@ -81,6 +81,9 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true,
+  },
   optimizeDeps: {
     exclude: ["@headlessui/react"],
     include: ["react-dom"],

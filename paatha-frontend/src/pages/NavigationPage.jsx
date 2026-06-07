@@ -63,7 +63,8 @@ import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import FloorSwitcher from "../components/FloorSwitcher";
 
-import { getMergedData, normalFloors } from "../constants/floors";
+import { floors, getMergedData, normalFloors } from "../constants/floors";
+import { pathSeparator } from "../utils/helper/pathSeparator";
 // import CMFirstFloor from "../assets/floors/cw-floor-1.svg";
 // import CMSecondFloor from "../assets/floors/cw-floor-2.svg";
 // import CMThirdFloor from "../assets/floors/cw-floor-3.svg";
@@ -230,6 +231,29 @@ const NavigationPage = () => {
 
   const handleRecalibrateSuccess = (newRoute, currentNodeId) => {
     const currentMerged = getMergedData();
+    
+    // Check if the recalibrated node is in the current path
+    if (currentPath && currentPath.includes(currentNodeId)) {
+      const qrIndex = currentPath.indexOf(currentNodeId);
+      if (qrIndex !== -1) {
+        setCount(qrIndex);
+        
+        // Find the absolute direction of the segment at qrIndex (or to the next segment)
+        let direction = currentRotation;
+        const arr = currentPath.map(id => currentMerged.find(n => n.id === id)).filter(Boolean);
+        if (arr && arr.length > qrIndex + 1) {
+          direction = calculateDirection(
+            arr[qrIndex],
+            arr[qrIndex + 1]
+          );
+        }
+        setCurrentRotation(direction);
+        zoomToUnitAndDetectNearby(currentNodeId, direction);
+        return;
+      }
+    }
+
+    // Fallback: If not on the current path (off-route or next floor), update path with newRoute
     const pathWithFloors = pathSeparator(floors, newRoute);
     
     const floorPaths = pathWithFloors.map(({ floor, path }) => ({

@@ -3,6 +3,7 @@ import { FooterNav, Header } from "../container/Home";
 import { DirectIcon } from "../components/Icons";
 import { Link, useNavigate } from "react-router-dom";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { BACKEND_URL } from "../config";
 // import floor from "../assets/floors/ground-floor-alt.svg";
 import DirectionFloor from "../components/DirectionFloor";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +33,7 @@ const CMThirdFloor = simpleFloor;
 import { scaleLinear, zoomIdentity, zoom, merge, easeCircleInOut } from "d3";
 import QRScanner from "../components/QRScanner";
 import { IoQrCodeOutline } from "react-icons/io5";
+import { getMergedData } from "../constants/floors";
 
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
@@ -266,7 +268,7 @@ const HomePage = () => {
   const handleScanSuccess = async (qrCode) => {
     setShowScanner(false);
     try {
-      const res = await fetch("http://localhost:8000/api/qr/resolve", {
+      const res = await fetch(`${BACKEND_URL}/api/qr/resolve`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -286,6 +288,11 @@ const HomePage = () => {
             coordinates: [data.x_coordinate, data.y_coordinate],
             floor: 0,
             neighbors: [],
+          };
+        } else {
+          resolvedNode = {
+            ...resolvedNode,
+            name: resolvedNode.name || data.name,
           };
         }
         dispatch(setFloor(resolvedNode.floor));

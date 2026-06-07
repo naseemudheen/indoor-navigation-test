@@ -16,8 +16,9 @@ import {
 } from "react-icons/io5";
 import QRCreateModal from "./QRCreateModal";
 import QRBulkGenerator from "./QRBulkGenerator";
+import { BACKEND_URL } from "../config";
 
-const QRManagementPage = ({ nodes }) => {
+const QRManagementPage = ({ nodes, onQrChange }) => {
   const [qrs, setQrs] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -44,12 +45,15 @@ const QRManagementPage = ({ nodes }) => {
         ...(activeParam && { is_active: activeParam })
       });
 
-      const res = await fetch(`http://localhost:8000/api/qr?${query.toString()}`);
+      const res = await fetch(`${BACKEND_URL}/api/qr?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setQrs(data.items || []);
         setTotal(data.total || 0);
         setPages(data.pages || 1);
+        if (onQrChange) {
+          onQrChange();
+        }
       }
     } catch (err) {
       console.error("Error fetching QR locations:", err);
@@ -73,7 +77,7 @@ const QRManagementPage = ({ nodes }) => {
     setIsDeleting(id);
     try {
       const token = localStorage.getItem("paatha_token");
-      const res = await fetch(`http://localhost:8000/api/qr/${id}`, {
+      const res = await fetch(`${BACKEND_URL}/api/qr/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -91,7 +95,7 @@ const QRManagementPage = ({ nodes }) => {
 
   const handlePrintSheet = async () => {
     try {
-      window.open("http://localhost:8000/api/qr/print-sheet", "_blank");
+      window.open(`${BACKEND_URL}/api/qr/print-sheet`, "_blank");
     } catch (err) {
       console.error("Error downloading print sheet:", err);
     }
@@ -247,7 +251,7 @@ const QRManagementPage = ({ nodes }) => {
                         {/* Download Image */}
                         {qr.image_path && (
                           <a
-                            href={`http://localhost:8000${qr.image_path}`}
+                            href={`${BACKEND_URL}${qr.image_path}`}
                             download={`${qr.qr_code}.png`}
                             title="Download PNG"
                             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all"
@@ -349,7 +353,7 @@ const QRManagementPage = ({ nodes }) => {
             
             <div className="border border-slate-200 p-4 rounded-2xl bg-white shadow-sm max-w-[170px] mx-auto">
               <img 
-                src={`http://localhost:8000${selectedQrForEdit.image_path}`} 
+                src={`${BACKEND_URL}${selectedQrForEdit.image_path}`} 
                 alt={selectedQrForEdit.qr_code}
                 className="w-full h-auto"
               />

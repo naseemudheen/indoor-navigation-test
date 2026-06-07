@@ -523,6 +523,12 @@ export default function Floorplan({
     }
   }, [prevTrigger, index]);
 
+  useEffect(() => {
+    if (currentPath && index !== undefined) {
+      updateLine(index);
+    }
+  }, [index, currentPath]);
+
   function closeModal() {
     // setIsReached(false)
     dispatch(resetInitialPath());

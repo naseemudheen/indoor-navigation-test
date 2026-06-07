@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { IoCloseOutline, IoCameraOutline } from "react-icons/io5";
 import { extractQrCodePayload } from "../utils/qr";
+import { BACKEND_URL } from "../config";
 
 const QRScanner = ({ onScanSuccess, onClose }) => {
   const [activeTab, setActiveTab] = useState("camera"); // "camera" | "manual"
@@ -17,7 +18,7 @@ const QRScanner = ({ onScanSuccess, onClose }) => {
     const fetchQrs = async () => {
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:8000/api/qr?size=100");
+        const res = await fetch(`${BACKEND_URL}/api/qr?size=100`);
         if (res.ok) {
           const data = await res.json();
           setQrList(data.items || []);
@@ -38,13 +39,15 @@ const QRScanner = ({ onScanSuccess, onClose }) => {
       return;
     }
 
+    let isEffectMounted = true;
+
     const startScanner = async () => {
       setErrorMsg(null);
       try {
         // Delay scanner instantiation slightly to ensure DOM element is mounted
         await new Promise((resolve) => setTimeout(resolve, 300));
         
-        if (!document.getElementById("reader")) return;
+        if (!isEffectMounted || !document.getElementById("reader")) return;
         
         const html5Qrcode = new Html5Qrcode("reader");
         html5QrcodeRef.current = html5Qrcode;
@@ -64,32 +67,47 @@ const QRScanner = ({ onScanSuccess, onClose }) => {
             // Quietly handle scan failure (polling)
           }
         );
-        setScannerStarted(true);
+        
+        if (isEffectMounted) {
+          setScannerStarted(true);
+        } else {
+          // If the effect was cleaned up while starting, stop scanner immediately
+          if (html5Qrcode.isScanning) {
+            await html5Qrcode.stop().catch(console.error);
+          }
+        }
       } catch (err) {
         console.error("Camera startup failed:", err);
-        setErrorMsg("Failed to start camera. Make sure camera permission is allowed and HTTPS is active.");
+        if (isEffectMounted) {
+          setErrorMsg("Failed to start camera. Make sure camera permission is allowed and HTTPS is active.");
+        }
       }
     };
 
     startScanner();
 
     return () => {
+      isEffectMounted = false;
       stopScanner();
     };
   }, [activeTab]);
 
   const stopScanner = () => {
-    if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
-      html5QrcodeRef.current
-        .stop()
-        .then(() => {
-          console.log("Scanner stopped successfully.");
-        })
-        .catch((err) => {
-          console.error("Error stopping scanner:", err);
-        });
-    }
     setScannerStarted(false);
+    if (html5QrcodeRef.current) {
+      const scanner = html5QrcodeRef.current;
+      html5QrcodeRef.current = null;
+      if (scanner.isScanning) {
+        scanner
+          .stop()
+          .then(() => {
+            console.log("Scanner stopped successfully.");
+          })
+          .catch((err) => {
+            console.error("Error stopping scanner:", err);
+          });
+      }
+    }
   };
 
   const handleManualSelect = (qrCode) => {
@@ -142,20 +160,21 @@ const QRScanner = ({ onScanSuccess, onClose }) => {
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {activeTab === "camera" ? (
             <div className="flex flex-col items-center justify-center">
-              <div 
-                id="reader" 
-                ref={scannerRef}
-                className="w-full aspect-square max-w-[280px] bg-slate-100 border border-dashed border-gray-300 rounded-2xl overflow-hidden relative"
-              >
+              <div className="w-full aspect-square max-w-[280px] relative">
+                <div 
+                  id="reader" 
+                  ref={scannerRef}
+                  className="w-full h-full bg-slate-100 border border-dashed border-gray-300 rounded-2xl overflow-hidden"
+                />
                 {!scannerStarted && !errorMsg && (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
+                  <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 pointer-events-none">
                     Initializing camera...
                   </div>
                 )}
               </div>
               
               {errorMsg && (
-                <div className="mt-4 p-3 bg-red-55 text-red-600 text-xs rounded-xl text-center font-medium">
+                <div className="mt-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center font-medium">
                   {errorMsg}
                 </div>
               )}

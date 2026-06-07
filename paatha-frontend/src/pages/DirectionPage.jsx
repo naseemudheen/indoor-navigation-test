@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { DestinationSection } from "../container/Destination";
 import StartingSection from "../container/Destination/StartingSection";
 import { useLocation } from "react-router-dom";
+import { BACKEND_URL } from "../config";
 import Lottie from "lottie-react";
 import loader from "../assets/loader.json";
 import simpleFloor from "../assets/floors/simple.svg";
@@ -302,7 +303,7 @@ const DirectionPage = () => {
     const normalizedQrCode = extractQrCodePayload(qrCode);
     setShowScanner(false);
     try {
-      const res = await fetch("http://localhost:8000/api/qr/resolve", {
+      const res = await fetch(`${BACKEND_URL}/api/qr/resolve`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -320,6 +321,11 @@ const DirectionPage = () => {
             coordinates: [data.x_coordinate, data.y_coordinate],
             floor: 0,
             neighbors: [],
+          };
+        } else {
+          resolvedNode = {
+            ...resolvedNode,
+            name: resolvedNode.name || data.name,
           };
         }
         dispatch(setFloor(resolvedNode.floor));
@@ -828,7 +834,12 @@ const DirectionPage = () => {
 
   useEffect(() => {
     if (state) {
-      setSelectedEndPath(state.endPoint);
+      if (state.endPoint) {
+        setSelectedEndPath(state.endPoint);
+      }
+      if (state.startPoint) {
+        setSelectedStartPath(state.startPoint);
+      }
     }
   }, [state]);
   const flooringData = cancerThird.map((item) => ({
@@ -849,16 +860,16 @@ const DirectionPage = () => {
       const data ={
         device_id:navigator.userAgent,
         start_location:{
-          name:selectedStartPath.name,
+          name:selectedStartPath.id,
           floor:selectedStartPath.floor
         },
         end_location:{
-          name:selectedEndPath.name,
+          name:selectedEndPath.id,
           floor:selectedEndPath.floor
         }
       }
 
-      const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:8000'}/navigation/guest-session/`, {
+      const res = await fetch(`${BACKEND_URL}/navigation/guest-session/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

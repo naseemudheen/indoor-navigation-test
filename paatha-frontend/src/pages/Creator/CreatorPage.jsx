@@ -3,6 +3,7 @@ import "./Creator.css";
 import { scaleLinear, zoomIdentity,zoom, easeCircleInOut } from "d3";
 import dijkstrajs from "dijkstrajs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BACKEND_URL } from "../../config";
 
 import simpleFloor from "../../assets/floors/simple.svg";
 // import FloorplanImage from "./assets/ground-md.svg";
@@ -160,6 +161,30 @@ export default function App() {
   const { mapData, mapDataStatus } = useSelector((state) => state.map);
   const [pathData, setPathData] = React.useState([]);
   const [markerData, setMarkerData] = React.useState([]);
+  const [qrLocations, setQrLocations] = React.useState([]);
+  const [loadingQr, setLoadingQr] = React.useState(false);
+
+  const fetchQrLocations = React.useCallback(async () => {
+    setLoadingQr(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/qr?size=500`);
+      if (res.ok) {
+        const data = await res.json();
+        setQrLocations(data.items || []);
+      } else {
+        setQrLocations([]);
+      }
+    } catch (err) {
+      console.error("Error fetching QR locations:", err);
+      setQrLocations([]);
+    } finally {
+      setLoadingQr(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchQrLocations();
+  }, [fetchQrLocations, activeModule]);
 
   React.useEffect(() => {
     if (mapDataStatus === 'succeeded' && mapData) {
@@ -174,7 +199,7 @@ export default function App() {
     try {
       const payload = { nodes: newData, markers: newMarkers || markerData };
       const token = localStorage.getItem("paatha_token");
-      const response = await fetch("http://localhost:8000/api/v1/map/sync/1", {
+      const response = await fetch(`${BACKEND_URL}/api/v1/map/sync/1`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -736,7 +761,7 @@ export default function App() {
 
       <div className="creator-main">
         {activeModule === "qr" ? (
-          <QRManagementPage nodes={mapData?.nodes || []} />
+          <QRManagementPage nodes={mapData?.nodes || []} onQrChange={fetchQrLocations} />
         ) : (
           <div className="floorplan-container">
             {!isCreatingPath && !isEditingPath ? (
@@ -758,6 +783,9 @@ export default function App() {
                 selectedPath={selectedPath}
                 zoomToUnit={zoomToUnitAndDetectNearby}
                 markerData={markerData}
+                qrLocations={qrLocations}
+                loadingQr={loadingQr}
+                fetchQrLocations={fetchQrLocations}
               />
             ) : isCreatingPath ? (
               <PathCreationFloorplan
@@ -768,6 +796,9 @@ export default function App() {
                 togglePathCreation={togglePathCreation}
                 setPath={(data) => savePathToDisk(data)}
                 floorPrefix={currentFloorPrefix}
+                qrLocations={qrLocations}
+                loadingQr={loadingQr}
+                fetchQrLocations={fetchQrLocations}
               />
             ) : (
               <PathEditingFloorplan
@@ -781,6 +812,9 @@ export default function App() {
                 markerData={markerData}
                 setMarkerData={(data) => savePathToDisk(pathData, data)}
                 floorPrefix={currentFloorPrefix}
+                qrLocations={qrLocations}
+                loadingQr={loadingQr}
+                fetchQrLocations={fetchQrLocations}
               />
             )}
           </div>

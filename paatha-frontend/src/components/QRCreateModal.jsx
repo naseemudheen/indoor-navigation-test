@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { IoCloseOutline } from "react-icons/io5";
+import { BACKEND_URL } from "../config";
 
 const QRCreateModal = ({ nodes, onClose, onSuccess, prefilledNodeId }) => {
   const [name, setName] = useState(prefilledNodeId ? `QR for ${prefilledNodeId}` : "");
@@ -50,7 +51,7 @@ const QRCreateModal = ({ nodes, onClose, onSuccess, prefilledNodeId }) => {
 
     try {
       const token = localStorage.getItem("paatha_token");
-      const res = await fetch("http://localhost:8000/api/qr", {
+      const res = await fetch(`${BACKEND_URL}/api/qr`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,7 +104,7 @@ const QRCreateModal = ({ nodes, onClose, onSuccess, prefilledNodeId }) => {
               
               <div className="border border-slate-200 p-4 rounded-3xl bg-white shadow-sm max-w-[200px]">
                 <img 
-                  src={`http://localhost:8000${previewQr.image_path}`} 
+                  src={`${BACKEND_URL}${previewQr.image_path}`} 
                   alt={previewQr.qr_code}
                   className="w-full h-auto"
                 />
@@ -117,7 +118,7 @@ const QRCreateModal = ({ nodes, onClose, onSuccess, prefilledNodeId }) => {
 
               <div className="flex items-center gap-3 w-full">
                 <a
-                  href={`http://localhost:8000${previewQr.image_path}`}
+                  href={`${BACKEND_URL}${previewQr.image_path}`}
                   download={`${previewQr.qr_code}.png`}
                   target="_blank"
                   rel="noreferrer"
