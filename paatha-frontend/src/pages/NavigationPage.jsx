@@ -38,6 +38,8 @@ import { ChevronDown, ChevronUp } from "../components/Icons";
 import { NAVIGATION_ZOOM_LEVEL } from "../constants/zoomConfig";
 import { IoCloseOutline, IoLocateOutline } from "react-icons/io5";
 import NavigationRecalibrationModal from "../components/NavigationRecalibrationModal";
+import usePedometer from "../hooks/usePedometer";
+// import useDeviceOrientation from "../hooks/useDeviceOrientation";
 
 import { FaWalking } from "react-icons/fa";
 import { Link } from "react-router-dom";
@@ -338,6 +340,8 @@ const NavigationPage = () => {
   const [initialFloorPassed, setInitialFloorPassed] = useState(false);
   const [isRotated, setIsRotated] = useState(false);
   const [remainingDistance, setRemainingDistance] = useState(state?.distance || 0);
+
+
   const [selectedNearbyDistance, setSelectedNearbyDistance] =
     React.useState(10);
   const [digitisationZone, setDigitisationZone] = React.useState({
@@ -391,6 +395,116 @@ const NavigationPage = () => {
   const [currentPoint, setCurrentPoint] = useState([]);
   const [rotationList, setRotationList] = useState([]);
   const [turningPointList, setTurningPointList] = useState([]);
+
+  // Auto-navigation state
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [distanceCoveredOnSegment, setDistanceCoveredOnSegment] = useState(0);
+
+  // Refs for tracking values inside event handlers to avoid stale closures
+  const countRef = useRef(count);
+  const detailedPathRef = useRef(detailedPath);
+  const isAutoModeRef = useRef(isAutoMode);
+
+  useEffect(() => {
+    countRef.current = count;
+  }, [count]);
+
+  useEffect(() => {
+    detailedPathRef.current = detailedPath;
+  }, [detailedPath]);
+
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+  }, [isAutoMode]);
+
+  useEffect(() => {
+    setDistanceCoveredOnSegment(0);
+  }, [floor, count]);
+
+  const handleStepDetected = () => {
+    if (!isAutoModeRef.current) return;
+    
+    const currentCount = countRef.current;
+    const currentDetailedPath = detailedPathRef.current;
+    
+    if (!currentDetailedPath || currentCount >= currentDetailedPath.length - 1) return;
+
+    const STRIDE_LENGTH = 0.75; // constant stride length in meters
+
+    setDistanceCoveredOnSegment((prevDist) => {
+      const nextDist = prevDist + STRIDE_LENGTH;
+      const currNode = currentDetailedPath[currentCount];
+      const nextNode = currentDetailedPath[currentCount + 1];
+      
+      if (currNode && nextNode) {
+        const neighbor = currNode.neighbors?.find(nb => nb.id === nextNode.id);
+        const segmentMeters = neighbor ? convertSvgDistanceToMeters(neighbor.distance) : 5;
+
+        if (nextDist >= segmentMeters) {
+          // Advance the pointer in a timeout to avoid updating state while rendering
+          setTimeout(() => {
+            handleNextClick();
+          }, 0);
+          return Math.max(0, nextDist - segmentMeters);
+        }
+      }
+      return nextDist;
+    });
+  };
+
+  const handleHeadingChanged = (newHeading) => {
+    if (!isAutoModeRef.current) return;
+    // Commented out device orientation-based rotation for the time being
+    // setCurrentRotation(newHeading);
+  };
+
+  const pedometer = usePedometer(handleStepDetected);
+  // Commented out device orientation tracking for the time being
+  // const orientation = useDeviceOrientation(handleHeadingChanged);
+
+  const handleToggleAutoMode = async () => {
+    if (isAutoMode) {
+      pedometer.stopTracking();
+      // orientation.stopTracking();
+      setIsAutoMode(false);
+      setDistanceCoveredOnSegment(0);
+    } else {
+      const motionGranted = await pedometer.requestPermission();
+      // const orientationGranted = await orientation.requestPermission();
+      if (motionGranted) {
+        setIsAutoMode(true);
+        setDistanceCoveredOnSegment(0);
+      } else {
+        alert("Permissions for motion sensor were not granted. Auto Mode cannot be started.");
+      }
+    }
+  };
+
+  const handleSimulateStep = () => {
+    const currentCount = countRef.current;
+    const currentDetailedPath = detailedPathRef.current;
+    if (!currentDetailedPath || currentCount >= currentDetailedPath.length - 1) return;
+
+    const STRIDE_LENGTH = 0.75;
+    setDistanceCoveredOnSegment((prevDist) => {
+      const nextDist = prevDist + STRIDE_LENGTH;
+      const currNode = currentDetailedPath[currentCount];
+      const nextNode = currentDetailedPath[currentCount + 1];
+      
+      if (currNode && nextNode) {
+        const neighbor = currNode.neighbors?.find(nb => nb.id === nextNode.id);
+        const segmentMeters = neighbor ? convertSvgDistanceToMeters(neighbor.distance) : 5;
+
+        if (nextDist >= segmentMeters) {
+          setTimeout(() => {
+            handleNextClick();
+          }, 0);
+          return Math.max(0, nextDist - segmentMeters);
+        }
+      }
+      return nextDist;
+    });
+  };
   const svgElementRef = React.useRef(null);
   const svgZoomRef = React.useRef(
     zoom().on("zoom", (event) => {
@@ -1165,26 +1279,59 @@ console.log(finalFloor);
         turningPoint={turningPoint}
         passedFloors={passedFloors}
         markerData={markerData}
+        isAutoMode={isAutoMode}
       />
       <TopNavigationSection message={message} currentFloor={floor} />
       {/* <BottomNavigation/> */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-end w-full h-auto max-w-3xl gap-4">
-        <div className="flex flex-col mr-4 divide-y w-fit">
+        <div className="flex flex-col items-end mr-4 gap-2">
+          {/* Simulated Step Button for testing */}
+          {isAutoMode && (
+            <button
+              onClick={handleSimulateStep}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow-lg transition-all border border-slate-700 shrink-0"
+              title="Simulate walking one step"
+            >
+              <FaWalking className="w-3.5 h-3.5 animate-bounce" />
+              Sim Step (+0.75m)
+            </button>
+          )}
+
+          {/* Auto Mode Toggle */}
           <button
-            onClick={handleNextClick}
-            onMouseUp={stopTrigger}
-            className="rounded-t-[20px] bg-[#29AB87] py-4 px-3 w-full"
+            onClick={handleToggleAutoMode}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold rounded-2xl shadow-lg transition-all text-xs border ${
+              isAutoMode
+                ? "bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700"
+                : "bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+            }`}
           >
-            <ActionIcon className="h-5 w-[35px]" />
+            <FaWalking className={`w-4 h-4 ${isAutoMode ? "animate-pulse" : ""}`} />
+            {isAutoMode ? "Auto Mode: ON" : "Enable Auto Mode"}
           </button>
-          <button
-            onClick={handlePrevClick}
-            onMouseUp={stopTrigger}
-            disabled={count <= 0}
-            className={`rounded-b-[20px] ${count <= 0 ? "bg-gray-400 opacity-50 cursor-not-allowed" : "bg-[#29AB87]"} py-4 px-3 w-max`}
-          >
-            <ActionIcon className="h-5 -rotate-180 w-[35px]" />
-          </button>
+
+          {/* Manual Arrow Controls */}
+          <div className="flex flex-col divide-y w-fit rounded-[20px] overflow-hidden shadow-lg border border-emerald-200">
+            <button
+              onClick={handleNextClick}
+              onMouseUp={stopTrigger}
+              className="bg-[#29AB87] hover:bg-[#228B6E] py-4 px-3 w-full transition-all text-white flex justify-center"
+            >
+              <ActionIcon className="h-5 w-[35px]" />
+            </button>
+            <button
+              onClick={handlePrevClick}
+              onMouseUp={stopTrigger}
+              disabled={count <= 0}
+              className={`py-4 px-3 w-max transition-all flex justify-center text-white ${
+                count <= 0
+                  ? "bg-gray-300 opacity-50 cursor-not-allowed"
+                  : "bg-[#29AB87] hover:bg-[#228B6E]"
+              }`}
+            >
+              <ActionIcon className="h-5 -rotate-180 w-[35px]" />
+            </button>
+          </div>
         </div>
         <div className="flex items-center justify-between w-full gap-3 px-3 py-2 bg-white drop-shadow-md">
           <div>
@@ -1197,6 +1344,20 @@ console.log(finalFloor);
                 ({Math.max(0, remainingDistance).toFixed(2)} mtr)
               </span>
             </p>
+            {isAutoMode && (
+              <div className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 mt-1 w-fit flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                Progress: {distanceCoveredOnSegment.toFixed(1)}m / {(() => {
+                  const currNode = detailedPath[count];
+                  const nextNode = detailedPath[count + 1];
+                  if (currNode && nextNode) {
+                    const neighbor = currNode.neighbors?.find(nb => nb.id === nextNode.id);
+                    return neighbor ? convertSvgDistanceToMeters(neighbor.distance).toFixed(1) : "5.0";
+                  }
+                  return "0.0";
+                })()}m
+              </div>
+            )}
             <p className="flex items-center text-xs text-[#00000066]">
               In every turning press the
               <span className="flex flex-col mx-3 rotate-90 divide-y w-fit">

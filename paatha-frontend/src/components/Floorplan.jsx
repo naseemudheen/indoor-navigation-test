@@ -19,6 +19,7 @@ import {
   renderTimerRight,
 } from "./timerRenderer";
 import { getRealPointCoordinateRelativeToDigitisationZone } from "../utils";
+import { BACKEND_URL } from "../config";
 import { Link } from "react-router-dom";
 import { Location } from "./Icons";
 import { useSelector } from "react-redux";
@@ -114,6 +115,7 @@ export default function Floorplan({
   isReached,
   setIsReached,
   markerData,
+  isAutoMode = false,
 }) {
   const dispatch = useDispatch();
   const completedPath = useRef([]);
@@ -212,20 +214,33 @@ export default function Floorplan({
       .attr("x", -scaledWidth / 2) // Center horizontally (width/2)
       .attr("y", -scaledHeight); // Anchor at the bottom (full height)
 
-    pathPoints2
-      .transition()
-      .duration(500)
-      .ease(easeQuadInOut)
-      .attr("transform", (value) => {
-        const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
-          digitisationZone,
-          0, // Map is un-rotated internally, React CSS handles the spin
-          value.coordinates[0],
-          value.coordinates[1],
-        );
-        // Counter-rotate the icon so it stays upright against the CSS map rotation
-        return `translate(${coordinates[0]}, ${coordinates[1]}) rotate(${currentRotation})`;
-      });
+    if (!isAutoMode) {
+      pathPoints2
+        .transition()
+        .duration(500)
+        .ease(easeQuadInOut)
+        .attr("transform", (value) => {
+          const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            0, // Map is un-rotated internally, React CSS handles the spin
+            value.coordinates[0],
+            value.coordinates[1],
+          );
+          // Counter-rotate the icon so it stays upright against the CSS map rotation
+          return `translate(${coordinates[0]}, ${coordinates[1]}) rotate(${currentRotation})`;
+        });
+    } else {
+      pathPoints2
+        .attr("transform", (value) => {
+          const coordinates = getRealPointCoordinateRelativeToDigitisationZone(
+            digitisationZone,
+            0,
+            value.coordinates[0],
+            value.coordinates[1],
+          );
+          return `translate(${coordinates[0]}, ${coordinates[1]}) rotate(${currentRotation})`;
+        });
+    }
 
     pathPoints2.raise();
   }, [
@@ -238,6 +253,7 @@ export default function Floorplan({
     selectedEndPath,
     stair,
     trans?.k,
+    isAutoMode,
   ]);
 
   useEffect(() => {
@@ -268,7 +284,7 @@ export default function Floorplan({
         const offset = -scaledSize / 2;
 
         // Render a single pointer and transition its position
-        pointerLayer.selectAll(".current-user-pointer")
+        const userPointerSelection = pointerLayer.selectAll(".current-user-pointer")
           .data([{ x: coordinates[0], y: coordinates[1] }])
           .join("image")
           .attr("class", "current-user-pointer relative z-30")
@@ -276,14 +292,21 @@ export default function Floorplan({
           .attr("width", scaledSize)
           .attr("height", scaledSize)
           .attr("x", offset) // Center horizontally
-          .attr("y", offset) // Center vertically
-          .transition() // Add smooth animation for the pointer
-          .duration(500)
-          .ease(easeQuadInOut)
-          .attr("transform", (d) => `translate(${d.x}, ${d.y}) rotate(${currentRotation})`);
+          .attr("y", offset); // Center vertically
+
+        if (!isAutoMode) {
+          userPointerSelection
+            .transition() // Add smooth animation for the pointer
+            .duration(500)
+            .ease(easeQuadInOut)
+            .attr("transform", (d) => `translate(${d.x}, ${d.y}) rotate(${currentRotation})`);
+        } else {
+          userPointerSelection
+            .attr("transform", (d) => `translate(${d.x}, ${d.y}) rotate(${currentRotation})`);
+        }
       }
     }
-  }, [isGettingInitialState, index, currentRotation, pathData, currentPath, trans?.k, digitisationZone]);
+  }, [isGettingInitialState, index, currentRotation, pathData, currentPath, trans?.k, digitisationZone, isAutoMode]);
 
   // React.useEffect(() => {
   //   const lineData = pathData
@@ -1335,7 +1358,7 @@ export default function Floorplan({
   const handleSendFeedback = async () => {
     setRateLoading(true)
     try {
-      const response = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/navigation/feedback/`, {
+      const response = await fetch(`${BACKEND_URL}/navigation/feedback/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1433,7 +1456,9 @@ export default function Floorplan({
         style={{
           transform: `rotate(${-currentRotation}deg)`,
           transformOrigin: `center`,
-          transition: "transform 0.8s cubic-bezier(0.455, 0.03, 0.515, 0.955)",
+          transition: isAutoMode
+            ? "transform 0.15s linear"
+            : "transform 0.8s cubic-bezier(0.455, 0.03, 0.515, 0.955)",
         }}
       >
         <g id="map-rotation-layer">
