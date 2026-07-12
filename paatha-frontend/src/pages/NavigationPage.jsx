@@ -399,6 +399,12 @@ const NavigationPage = () => {
   // Auto-navigation state
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [distanceCoveredOnSegment, setDistanceCoveredOnSegment] = useState(0);
+  const [strideLength, setStrideLength] = useState(0.75);
+  const strideLengthRef = useRef(strideLength);
+
+  useEffect(() => {
+    strideLengthRef.current = strideLength || 0.75;
+  }, [strideLength]);
 
   // Refs for tracking values inside event handlers to avoid stale closures
   const countRef = useRef(count);
@@ -429,10 +435,10 @@ const NavigationPage = () => {
     
     if (!currentDetailedPath || currentCount >= currentDetailedPath.length - 1) return;
 
-    const STRIDE_LENGTH = 0.75; // constant stride length in meters
+    const currentStride = strideLengthRef.current || 0.75;
 
     setDistanceCoveredOnSegment((prevDist) => {
-      const nextDist = prevDist + STRIDE_LENGTH;
+      const nextDist = prevDist + currentStride;
       const currNode = currentDetailedPath[currentCount];
       const nextNode = currentDetailedPath[currentCount + 1];
       
@@ -485,9 +491,9 @@ const NavigationPage = () => {
     const currentDetailedPath = detailedPathRef.current;
     if (!currentDetailedPath || currentCount >= currentDetailedPath.length - 1) return;
 
-    const STRIDE_LENGTH = 0.75;
+    const currentStride = strideLengthRef.current || 0.75;
     setDistanceCoveredOnSegment((prevDist) => {
-      const nextDist = prevDist + STRIDE_LENGTH;
+      const nextDist = prevDist + currentStride;
       const currNode = currentDetailedPath[currentCount];
       const nextNode = currentDetailedPath[currentCount + 1];
       
@@ -1285,16 +1291,42 @@ console.log(finalFloor);
       {/* <BottomNavigation/> */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-end w-full h-auto max-w-3xl gap-4">
         <div className="flex flex-col items-end mr-4 gap-2">
-          {/* Simulated Step Button for testing */}
+          {/* Simulated Step Button with Custom Stride Length for testing */}
           {isAutoMode && (
-            <button
-              onClick={handleSimulateStep}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow-lg transition-all border border-slate-700 shrink-0"
-              title="Simulate walking one step"
-            >
-              <FaWalking className="w-3.5 h-3.5 animate-bounce" />
-              Sim Step (+0.75m)
-            </button>
+            <div className="flex items-center gap-2 bg-slate-800 rounded-xl px-2.5 py-1.5 shadow-lg border border-slate-700 transition-all text-xs shrink-0">
+              <label htmlFor="strideInput" className="text-slate-400 font-semibold text-[10px] uppercase select-none">
+                Step:
+              </label>
+              <input
+                id="strideInput"
+                type="number"
+                value={strideLength}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setStrideLength(isNaN(val) ? "" : val);
+                }}
+                onBlur={() => {
+                  if (strideLength === "" || strideLength <= 0) {
+                    setStrideLength(0.75);
+                  }
+                }}
+                step="0.05"
+                min="0.1"
+                max="5"
+                className="w-14 px-1.5 py-0.5 text-center bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-bold"
+                title="Edit simulated stride length in meters"
+              />
+              <span className="text-slate-400 font-medium select-none">m</span>
+              <div className="w-[1px] h-4 bg-slate-700 mx-1" />
+              <button
+                onClick={handleSimulateStep}
+                className="flex items-center gap-1 text-white hover:text-emerald-400 font-bold transition-colors"
+                title="Simulate walking one step"
+              >
+                <FaWalking className="w-3.5 h-3.5 text-emerald-500 animate-bounce" />
+                Sim Step
+              </button>
+            </div>
           )}
 
           {/* Auto Mode Toggle */}

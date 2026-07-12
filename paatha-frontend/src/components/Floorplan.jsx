@@ -1152,14 +1152,10 @@ export default function Floorplan({
   // },[floor,currentPath])
 
   useEffect(() => {
-    if (selectedStartPath && index === 0) {
-      console.log(selectedStartPath);
-
-      zoomToUnit(selectedStartPath?.id, currentRotation);
-    } else if (index <= currentPath?.length) {
-      zoomToUnit(selectedEndPath?.id, currentRotation);
+    if (currentPath && currentPath[index]) {
+      zoomToUnit(currentPath[index], currentRotation);
     }
-  }, [selectedStartPath, floor, currentRotation]);
+  }, [currentPath, index, currentRotation, floor]);
 
   // useEffect(() => {
   //   if(turningPoint){
