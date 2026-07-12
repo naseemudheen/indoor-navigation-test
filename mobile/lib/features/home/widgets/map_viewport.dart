@@ -21,6 +21,8 @@ class MapViewport extends StatefulWidget {
   final String? endNodeId;
   final String? stairNodeId;
   final String? currentNodeId;
+  final double? currentUserX;
+  final double? currentUserY;
   final Function(String nodeId)? onNodeClicked;
   final TransformationController transformationController;
 
@@ -38,6 +40,8 @@ class MapViewport extends StatefulWidget {
     this.endNodeId,
     this.stairNodeId,
     this.currentNodeId,
+    this.currentUserX,
+    this.currentUserY,
     this.onNodeClicked,
     required this.transformationController,
   });
@@ -71,6 +75,7 @@ class _MapViewportState extends State<MapViewport> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final currentIndex = widget.activePath.indexOf(widget.currentNodeId ?? '');
     final coveredOffsets = <Offset>[];
@@ -82,7 +87,7 @@ class _MapViewportState extends State<MapViewport> {
       if (node.coordinates.length == 2 && node.coordinates[0] != 0) {
         final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
           widget.digitisationZone,
-          widget.rotation,
+          0.0,
           node.coordinates[0],
           node.coordinates[1],
         );
@@ -109,146 +114,157 @@ class _MapViewportState extends State<MapViewport> {
       minScale: 0.1,
       boundaryMargin: const EdgeInsets.all(2000),
       constrained: false,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 1. Background Floor Plan SVG Map
-          Transform(
-            transform: Matrix4.identity()
-              ..translate(widget.digitisationZone.origin[0], widget.digitisationZone.origin[1])
-              ..rotateZ(widget.rotation * math.pi / 180.0)
-              ..translate(-widget.digitisationZone.origin[0], -widget.digitisationZone.origin[1]),
-            child: SvgPicture.asset(
+      child: Transform(
+        transform: Matrix4.identity()
+          ..translate(widget.digitisationZone.origin[0], widget.digitisationZone.origin[1])
+          ..rotateZ(-widget.rotation * math.pi / 180.0)
+          ..translate(-widget.digitisationZone.origin[0], -widget.digitisationZone.origin[1]),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // 1. Background Floor Plan SVG Map
+            SvgPicture.asset(
               widget.floorplanAsset,
               width: widget.floorplanWidth,
               height: widget.floorplanHeight,
               fit: BoxFit.contain,
               alignment: Alignment.topLeft,
             ),
-          ),
 
-          // 2. Custom Painter layer for path line drawing
-          Positioned.fill(
-            child: CustomPaint(
-              painter: FloorplanPainter(
-                remainingPath: remainingOffsets,
-                coveredPath: coveredOffsets,
-                scale: _zoomScale,
-              ),
-            ),
-          ),
-
-          // 3. Overlay pins and markers
-          ...widget.nodes.map((node) {
-            final isStart = node.id == widget.startNodeId;
-            final isEnd = node.id == widget.endNodeId;
-            final isStair = node.id == widget.stairNodeId;
-
-            if (!isStart && !isEnd && !isStair) return const SizedBox.shrink();
-
-            final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
-              widget.digitisationZone,
-              widget.rotation,
-              node.coordinates[0],
-              node.coordinates[1],
-            );
-
-            // Scale down pin size to keep it constant on screen
-            final pinSize = 36.0 / adjustedScale;
-            final color = isStart
-                ? AppColors.startPin
-                : (isEnd ? AppColors.endPin : AppColors.stairPin);
-
-            return Positioned(
-              left: pos[0] - (pinSize / 2),
-              top: pos[1] - pinSize, // Pin tip should align with coordinate
-              child: GestureDetector(
-                onTap: () => widget.onNodeClicked?.call(node.id),
-                child: Icon(
-                  Icons.location_on,
-                  color: color,
-                  size: pinSize,
+            // 2. Custom Painter layer for path line drawing
+            Positioned.fill(
+              child: CustomPaint(
+                painter: FloorplanPainter(
+                  remainingPath: remainingOffsets,
+                  coveredPath: coveredOffsets,
+                  scale: _zoomScale,
                 ),
               ),
-            );
-          }),
-
-          // 3.5. Current User Location Pointer
-          if (widget.currentNodeId != null)
-            Builder(
-              builder: (context) {
-                final currentNode = widget.nodes.firstWhere(
-                  (n) => n.id == widget.currentNodeId,
-                  orElse: () => Node(id: '', coordinates: [], neighbors: []),
-                );
-                if (currentNode.coordinates.length == 2 && currentNode.id.isNotEmpty) {
-                  final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
-                    widget.digitisationZone,
-                    widget.rotation,
-                    currentNode.coordinates[0],
-                    currentNode.coordinates[1],
-                  );
-                  final pointerSize = 36.0 / adjustedScale;
-                  return Positioned(
-                    left: pos[0] - (pointerSize / 2),
-                    top: pos[1] - (pointerSize / 2),
-                    child: SvgPicture.asset(
-                      'assets/icons/start-point.svg',
-                      width: pointerSize,
-                      height: pointerSize,
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
             ),
 
-          // 4. Map markers (text labels and category icons)
-          ...widget.markers.map((marker) {
-            final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
-              widget.digitisationZone,
-              widget.rotation,
-              marker.coordinates[0],
-              marker.coordinates[1],
-            );
+            // 3. Overlay pins and markers
+            ...widget.nodes.map((node) {
+              final isStart = node.id == widget.startNodeId;
+              final isEnd = node.id == widget.endNodeId;
+              final isStair = node.id == widget.stairNodeId;
 
-            if (marker.type == 'icon') {
-              final iconSize = 18.0 / adjustedScale;
-              final iconPath = AppIconMap.getIconPath(marker.iconType ?? 'door');
+              if (!isStart && !isEnd && !isStair) return const SizedBox.shrink();
 
-              return Positioned(
-                left: pos[0] - (iconSize / 2),
-                top: pos[1] - (iconSize / 2),
-                child: SvgPicture.asset(
-                  iconPath,
-                  width: iconSize,
-                  height: iconSize,
-                ),
+              final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
+                widget.digitisationZone,
+                0.0,
+                node.coordinates[0],
+                node.coordinates[1],
               );
-            } else {
-              // Draw Label Text
-              final fontSize = 7.5 / adjustedScale;
-              if (marker.text == null || marker.text!.isEmpty) return const SizedBox.shrink();
+
+              final pinSize = 36.0 / adjustedScale;
+              final color = isStart
+                  ? AppColors.startPin
+                  : (isEnd ? AppColors.endPin : AppColors.stairPin);
 
               return Positioned(
-                left: pos[0] - 100, // Large boundary to prevent wrapping
-                top: pos[1],
-                child: SizedBox(
-                  width: 200,
-                  child: Text(
-                    marker.text!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.primaryDark,
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.bold,
-                    ),
+                left: pos[0] - (pinSize / 2),
+                top: pos[1] - pinSize,
+                child: GestureDetector(
+                  onTap: () => widget.onNodeClicked?.call(node.id),
+                  child: Icon(
+                    Icons.location_on,
+                    color: color,
+                    size: pinSize,
                   ),
                 ),
               );
-            }
-          }),
-        ],
+            }),
+
+            // 3.5. Current User Location Pointer
+            if ((widget.currentUserX != null && widget.currentUserY != null) || widget.currentNodeId != null)
+              Builder(
+                builder: (context) {
+                  double? targetX = widget.currentUserX;
+                  double? targetY = widget.currentUserY;
+
+                  if (targetX == null || targetY == null) {
+                    final currentNode = widget.nodes.firstWhere(
+                      (n) => n.id == widget.currentNodeId,
+                      orElse: () => Node(id: '', coordinates: [], neighbors: []),
+                    );
+                    if (currentNode.coordinates.length == 2 && currentNode.id.isNotEmpty) {
+                      targetX = currentNode.coordinates[0];
+                      targetY = currentNode.coordinates[1];
+                    }
+                  }
+
+                  if (targetX != null && targetY != null) {
+                    final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
+                      widget.digitisationZone,
+                      0.0,
+                      targetX,
+                      targetY,
+                    );
+                    final pointerSize = 36.0 / adjustedScale;
+                    return Positioned(
+                      left: pos[0] - (pointerSize / 2),
+                      top: pos[1] - (pointerSize / 2),
+                      child: Transform.rotate(
+                        angle: widget.rotation * math.pi / 180.0,
+                        child: SvgPicture.asset(
+                          'assets/icons/start-point.svg',
+                          width: pointerSize,
+                          height: pointerSize,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+
+            // 4. Map markers (text labels and category icons)
+            ...widget.markers.map((marker) {
+              final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
+                widget.digitisationZone,
+                0.0,
+                marker.coordinates[0],
+                marker.coordinates[1],
+              );
+
+              if (marker.type == 'icon') {
+                final iconSize = 18.0 / adjustedScale;
+                final iconPath = AppIconMap.getIconPath(marker.iconType ?? 'door');
+
+                return Positioned(
+                  left: pos[0] - (iconSize / 2),
+                  top: pos[1] - (iconSize / 2),
+                  child: SvgPicture.asset(
+                    iconPath,
+                    width: iconSize,
+                    height: iconSize,
+                  ),
+                );
+              } else {
+                final fontSize = 7.5 / adjustedScale;
+                if (marker.text == null || marker.text!.isEmpty) return const SizedBox.shrink();
+
+                return Positioned(
+                  left: pos[0] - 100,
+                  top: pos[1],
+                  child: SizedBox(
+                    width: 200,
+                    child: Text(
+                      marker.text!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              }
+            }),
+          ],
+        ),
       ),
     );
   }

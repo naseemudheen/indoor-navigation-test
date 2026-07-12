@@ -31,8 +31,12 @@ class NavigationScreen extends ConsumerStatefulWidget {
   ConsumerState<NavigationScreen> createState() => _NavigationScreenState();
 }
 
-class _NavigationScreenState extends ConsumerState<NavigationScreen> {
+class _NavigationScreenState extends ConsumerState<NavigationScreen> with SingleTickerProviderStateMixin {
   final TransformationController _transformationController = TransformationController();
+  
+  late AnimationController _animationController;
+  Animation<Matrix4>? _mapAnimation;
+  Animation<double>? _rotationAnimation;
   
   int _currentPathIndex = 0; // Index in the active floor path segment
   int _currentFloorIndex = 0; // Index in the list of floors (fullPath)
@@ -43,6 +47,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   String _guidanceMessage = 'Go Straight To Next Point';
   double _currentRotation = 0.0;
   double _remainingDistance = 0.0;
+  double _currentX = 0.0;
+  double _currentY = 0.0;
   
   bool _isAutoMode = false;
   double _distanceCoveredOnSegment = 0.0;
@@ -54,6 +60,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   void initState() {
     super.initState();
     _remainingDistance = widget.totalDistance;
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupActiveFloor();
     });
@@ -63,6 +73,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   void dispose() {
     _compassSubscription?.cancel();
     _transformationController.dispose();
+    _animationController.dispose();
     Future.microtask(() {
       ref.read(mapStateProvider.notifier).clearRoute();
     });
@@ -76,11 +87,18 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     // Set active floor level in StateNotifier to load corresponding UI floor map
     ref.read(mapStateProvider.notifier).setActiveFloor(activeFloorPath.floor);
     
+    final startNodeId = activeFloorPath.path.isNotEmpty ? activeFloorPath.path[0] : '';
+    final startNode = state.nodes.firstWhere((n) => n.id == startNodeId, orElse: () => Node(id: '', coordinates: [0.0, 0.0], neighbors: []));
+
     setState(() {
       _activeFloorPathIds = activeFloorPath.path;
       _activeFloorNodes = state.nodes;
       _currentPathIndex = 0;
       _distanceCoveredOnSegment = 0.0;
+      if (startNode.coordinates.length == 2) {
+        _currentX = startNode.coordinates[0];
+        _currentY = startNode.coordinates[1];
+      }
       _updateGuidanceAndRotation();
     });
   }
@@ -133,34 +151,62 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
     setState(() {
       _guidanceMessage = msg;
-      _currentRotation = targetRotation;
       if (_currentPathIndex == _activeFloorPathIds.length - 1 && _currentFloorIndex == widget.fullPath.length - 1) {
         _remainingDistance = 0.0;
       }
     });
   }
 
-  void _focusOnCoordinate(double pctX, double pctY, double rotation) {
-    const mapSize = 1080.0;
-    
-    final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
-      DigitisationZone(origin: const [100, 800], width: mapSize, height: mapSize),
-      rotation,
-      pctX,
-      pctY,
-    );
+  void _focusOnCoordinate(double targetX, double targetY, double targetRotation) {
+    final startX = _currentX;
+    final startY = _currentY;
+    final startRotation = _currentRotation;
 
-    const zoomLevel = 3.5;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    
-    final x = (screenWidth / 2) - (pos[0] * zoomLevel);
-    final y = (screenHeight / 2) - (pos[1] * zoomLevel);
+    double diff = targetRotation - startRotation;
+    while (diff < -180.0) diff += 360.0;
+    while (diff > 180.0) diff -= 360.0;
+    final endRotation = startRotation + diff;
 
-    _transformationController.value = Matrix4.identity()
-      ..translate(x, y)
-      ..scale(zoomLevel);
+    _animationController.stop();
+    _animationController.reset();
+
+    final xTween = Tween<double>(begin: startX, end: targetX);
+    final yTween = Tween<double>(begin: startY, end: targetY);
+    final rotationTween = Tween<double>(begin: startRotation, end: endRotation);
+
+    _animationController.removeListener(_onAnimationTick);
+    _animationController.addListener(() {
+      final curX = xTween.evaluate(_animationController);
+      final curY = yTween.evaluate(_animationController);
+      final curRot = rotationTween.evaluate(_animationController) % 360.0;
+
+      final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
+        DigitisationZone(origin: const [100, 800], width: 1080.0, height: 1080.0),
+        -curRot,
+        curX,
+        curY,
+      );
+
+      const zoomLevel = 2.0;
+      final screenWidth = MediaQuery.of(context).size.width;
+      final screenHeight = MediaQuery.of(context).size.height;
+      final x = (screenWidth / 2) - (pos[0] * zoomLevel);
+      final y = (screenHeight / 2) - (pos[1] * zoomLevel);
+
+      setState(() {
+        _currentX = curX;
+        _currentY = curY;
+        _currentRotation = curRot;
+        _transformationController.value = Matrix4.identity()
+          ..translate(x, y)
+          ..scale(zoomLevel);
+      });
+    });
+
+    _animationController.forward();
   }
+
+  void _onAnimationTick() {}
 
   void _handleNextClick() {
     if (_currentPathIndex >= _activeFloorPathIds.length - 1) {
@@ -334,6 +380,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                     currentNodeId: _activeFloorPathIds.isNotEmpty && _currentPathIndex < _activeFloorPathIds.length
                         ? _activeFloorPathIds[_currentPathIndex]
                         : null,
+                    currentUserX: _currentX,
+                    currentUserY: _currentY,
                     transformationController: _transformationController,
                   ),
           ),
