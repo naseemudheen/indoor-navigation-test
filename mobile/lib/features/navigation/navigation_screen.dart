@@ -54,13 +54,18 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   void initState() {
     super.initState();
     _remainingDistance = widget.totalDistance;
-    _setupActiveFloor();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupActiveFloor();
+    });
   }
 
   @override
   void dispose() {
     _compassSubscription?.cancel();
     _transformationController.dispose();
+    Future.microtask(() {
+      ref.read(mapStateProvider.notifier).clearRoute();
+    });
     super.dispose();
   }
 
@@ -85,70 +90,67 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
     final allNodes = ref.read(mapStateProvider).nodes;
     final currNodeId = _activeFloorPathIds[_currentPathIndex];
-    
     final currNode = allNodes.firstWhere((n) => n.id == currNodeId);
-    
-    // Focus on active node coordinate
-    _focusOnCoordinate(currNode.coordinates[0], currNode.coordinates[1]);
 
-    if (_currentPathIndex == _activeFloorPathIds.length - 1) {
-      if (_currentFloorIndex < widget.fullPath.length - 1) {
-        // Multi-floor path: reached staircase
-        setState(() {
-          _guidanceMessage = 'Take Stairs / Lift to ${_getFloorName(widget.fullPath[_currentFloorIndex + 1].floor)}';
-        });
-      } else {
-        setState(() {
-          _guidanceMessage = 'Destination Reached';
-          _remainingDistance = 0.0;
-        });
-      }
-      return;
-    }
-
-    final nextNodeId = _activeFloorPathIds[_currentPathIndex + 1];
-    final nextNode = allNodes.firstWhere((n) => n.id == nextNodeId);
-
-    // Calculate heading direction of the next segment (Heading-Up)
-    final directionAngle = NavigationEngine.calculateDirection(currNode, nextNode);
-
-    // Calculate turn prompt based on subsequent nodes
+    // Calculate heading direction of the segment (Heading-Up)
+    double targetRotation = _currentRotation;
     String msg = 'Go Straight To Next Point';
-    if (_currentPathIndex > 0) {
-      final prevNodeId = _activeFloorPathIds[_currentPathIndex - 1];
-      final prevNode = allNodes.firstWhere((n) => n.id == prevNodeId);
-      
-      double angle = NavigationEngine.calculateAngle(prevNode, currNode, nextNode);
-      if (angle < 0) angle += 360;
 
-      if (angle > 0 && angle <= 45) {
-        msg = 'Turn slightly right';
-      } else if (angle > 45 && angle <= 135) {
-        msg = 'Turn right';
-      } else if (angle > 135 && angle <= 225) {
-        msg = 'Turn slightly left';
-      } else if (angle > 225 && angle <= 315) {
-        msg = 'Turn left';
+    if (_currentPathIndex < _activeFloorPathIds.length - 1) {
+      final nextNodeId = _activeFloorPathIds[_currentPathIndex + 1];
+      final nextNode = allNodes.firstWhere((n) => n.id == nextNodeId);
+      targetRotation = NavigationEngine.calculateDirection(currNode, nextNode);
+
+      // Calculate turn prompt based on subsequent nodes
+      if (_currentPathIndex > 0) {
+        final prevNodeId = _activeFloorPathIds[_currentPathIndex - 1];
+        final prevNode = allNodes.firstWhere((n) => n.id == prevNodeId);
+        
+        double angle = NavigationEngine.calculateAngle(prevNode, currNode, nextNode);
+        if (angle < 0) angle += 360;
+
+        if (angle > 0 && angle <= 45) {
+          msg = 'Turn slightly right';
+        } else if (angle > 45 && angle <= 135) {
+          msg = 'Turn right';
+        } else if (angle > 135 && angle <= 225) {
+          msg = 'Turn slightly left';
+        } else if (angle > 225 && angle <= 315) {
+          msg = 'Turn left';
+        }
+      }
+    } else {
+      // Reached the end of the path on the active floor
+      if (_currentFloorIndex < widget.fullPath.length - 1) {
+        msg = 'Take Stairs / Lift to ${_getFloorName(widget.fullPath[_currentFloorIndex + 1].floor)}';
+      } else {
+        msg = 'Destination Reached';
       }
     }
+
+    // Focus on active node coordinate with target rotation
+    _focusOnCoordinate(currNode.coordinates[0], currNode.coordinates[1], targetRotation);
 
     setState(() {
       _guidanceMessage = msg;
-      _currentRotation = directionAngle;
+      _currentRotation = targetRotation;
+      if (_currentPathIndex == _activeFloorPathIds.length - 1 && _currentFloorIndex == widget.fullPath.length - 1) {
+        _remainingDistance = 0.0;
+      }
     });
   }
 
-  void _focusOnCoordinate(double pctX, double pctY) {
+  void _focusOnCoordinate(double pctX, double pctY, double rotation) {
     const mapSize = 1080.0;
     
     final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
       DigitisationZone(origin: const [100, 800], width: mapSize, height: mapSize),
-      _currentRotation,
+      rotation,
       pctX,
       pctY,
     );
 
-    const zoomLevel = 5.0;
+    const zoomLevel = 3.5;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     
@@ -329,6 +331,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                     startNodeId: widget.startPoint.id,
                     endNodeId: widget.endPoint.id,
                     stairNodeId: widget.stairNode?.id,
+                    currentNodeId: _activeFloorPathIds.isNotEmpty && _currentPathIndex < _activeFloorPathIds.length
+                        ? _activeFloorPathIds[_currentPathIndex]
+                        : null,
                     transformationController: _transformationController,
                   ),
           ),
@@ -342,10 +347,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
-                ],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border, width: 0.8),
+                boxShadow: AppColors.softShadow,
               ),
               child: Row(
                 children: [
@@ -382,9 +386,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               padding: const EdgeInsets.all(24),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+                  BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, -4))
                 ],
               ),
               child: Column(
@@ -398,103 +402,142 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Remaining',
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                            'Remaining Distance',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             '${_remainingDistance.toStringAsFixed(1)} mtr',
                             style: const TextStyle(
                               color: AppColors.textDark,
                               fontWeight: FontWeight.bold,
-                              fontSize: 20,
+                              fontSize: 22,
                             ),
                           )
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: AppColors.secondary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           _getFloorName(widget.fullPath[_currentFloorIndex].floor),
                           style: const TextStyle(
                             color: AppColors.secondary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 13,
                           ),
                         ),
                       )
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   
                   // Waypoint Navigation Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary, size: 20),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary.withOpacity(0.08),
+                          padding: const EdgeInsets.all(12),
+                        ),
                         onPressed: _handlePrevClick,
                       ),
                       
                       // Auto Mode toggle button
-                      OutlinedButton.icon(
-                        onPressed: _toggleAutoMode,
-                        icon: Icon(
-                          _isAutoMode ? Icons.directions_walk : Icons.play_arrow,
-                          color: _isAutoMode ? Colors.white : AppColors.primary,
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: _isAutoMode ? AppColors.primaryGradient : null,
+                          borderRadius: BorderRadius.circular(30),
+                          border: _isAutoMode ? null : Border.all(color: AppColors.primary, width: 1.5),
+                          boxShadow: _isAutoMode ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ] : null,
                         ),
-                        label: Text(
-                          _isAutoMode ? 'Auto: ON' : 'Start Auto',
-                          style: TextStyle(
+                        child: ElevatedButton.icon(
+                          onPressed: _toggleAutoMode,
+                          icon: Icon(
+                            _isAutoMode ? Icons.directions_walk_rounded : Icons.play_arrow_rounded,
                             color: _isAutoMode ? Colors.white : AppColors.primary,
                           ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: _isAutoMode ? AppColors.primary : Colors.transparent,
-                          side: const BorderSide(color: AppColors.primary),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          label: Text(
+                            _isAutoMode ? 'Auto: ON' : 'Start Auto',
+                            style: TextStyle(
+                              color: _isAutoMode ? Colors.white : AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          ),
                         ),
                       ),
 
                       // Simulate virtual step button
                       if (_isAutoMode)
-                        ElevatedButton(
-                          onPressed: _onStepDetected,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.secondary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: AppColors.secondaryGradient,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.secondary.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
                           ),
-                          child: const Text('Simulate Step', style: TextStyle(color: Colors.white)),
+                          child: ElevatedButton(
+                            onPressed: _onStepDetected,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            ),
+                            child: const Text('Step', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
                         ),
 
                       IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios, color: AppColors.primary),
+                        icon: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 20),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary.withOpacity(0.08),
+                          padding: const EdgeInsets.all(12),
+                        ),
                         onPressed: _handleNextClick,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   
                   // Exit Button
-                  TextButton(
+                  TextButton.icon(
                     onPressed: () {
                       ref.read(pedometerProvider.notifier).stopTracking();
                       _compassSubscription?.cancel();
                       ref.read(mapStateProvider.notifier).clearRoute();
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
-                    child: const Text(
+                    icon: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 18),
+                    label: const Text(
                       'Exit Navigation',
                       style: TextStyle(
-                        color: Colors.red,
+                        color: Colors.redAccent,
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                        fontSize: 14,
                       ),
                     ),
                   ),

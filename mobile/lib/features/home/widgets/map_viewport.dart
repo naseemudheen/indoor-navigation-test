@@ -6,6 +6,7 @@ import '../../../core/models/marker.dart';
 import '../../../core/models/node.dart';
 import '../../../core/utils/coordinate_utils.dart';
 import 'floorplan_painter.dart';
+import 'dart:math' as math;
 
 class MapViewport extends StatefulWidget {
   final String floorplanAsset;
@@ -19,6 +20,7 @@ class MapViewport extends StatefulWidget {
   final String? startNodeId;
   final String? endNodeId;
   final String? stairNodeId;
+  final String? currentNodeId;
   final Function(String nodeId)? onNodeClicked;
   final TransformationController transformationController;
 
@@ -35,6 +37,7 @@ class MapViewport extends StatefulWidget {
     this.startNodeId,
     this.endNodeId,
     this.stairNodeId,
+    this.currentNodeId,
     this.onNodeClicked,
     required this.transformationController,
   });
@@ -69,9 +72,12 @@ class _MapViewportState extends State<MapViewport> {
 
   @override
   Widget build(BuildContext context) {
-    // Generate Offset points for the path custom painter
-    final pathOffsets = <Offset>[];
-    for (var id in widget.activePath) {
+    final currentIndex = widget.activePath.indexOf(widget.currentNodeId ?? '');
+    final coveredOffsets = <Offset>[];
+    final remainingOffsets = <Offset>[];
+
+    for (int i = 0; i < widget.activePath.length; i++) {
+      final id = widget.activePath[i];
       final node = widget.nodes.firstWhere((n) => n.id == id, orElse: () => Node(id: id, coordinates: [0, 0], neighbors: []));
       if (node.coordinates.length == 2 && node.coordinates[0] != 0) {
         final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
@@ -80,7 +86,18 @@ class _MapViewportState extends State<MapViewport> {
           node.coordinates[0],
           node.coordinates[1],
         );
-        pathOffsets.add(Offset(pos[0], pos[1]));
+        final offset = Offset(pos[0], pos[1]);
+        
+        if (currentIndex != -1) {
+          if (i <= currentIndex) {
+            coveredOffsets.add(offset);
+          }
+          if (i >= currentIndex) {
+            remainingOffsets.add(offset);
+          }
+        } else {
+          remainingOffsets.add(offset);
+        }
       }
     }
 
@@ -91,22 +108,31 @@ class _MapViewportState extends State<MapViewport> {
       maxScale: 15.0,
       minScale: 0.1,
       boundaryMargin: const EdgeInsets.all(2000),
+      constrained: false,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // 1. Background Floor Plan SVG Map
-          SvgPicture.asset(
-            widget.floorplanAsset,
-            width: widget.floorplanWidth,
-            height: widget.floorplanHeight,
-            fit: BoxFit.fill,
+          Transform(
+            transform: Matrix4.identity()
+              ..translate(widget.digitisationZone.origin[0], widget.digitisationZone.origin[1])
+              ..rotateZ(widget.rotation * math.pi / 180.0)
+              ..translate(-widget.digitisationZone.origin[0], -widget.digitisationZone.origin[1]),
+            child: SvgPicture.asset(
+              widget.floorplanAsset,
+              width: widget.floorplanWidth,
+              height: widget.floorplanHeight,
+              fit: BoxFit.contain,
+              alignment: Alignment.topLeft,
+            ),
           ),
 
           // 2. Custom Painter layer for path line drawing
           Positioned.fill(
             child: CustomPaint(
               painter: FloorplanPainter(
-                pathCoordinates: pathOffsets,
+                remainingPath: remainingOffsets,
+                coveredPath: coveredOffsets,
                 scale: _zoomScale,
               ),
             ),
@@ -146,6 +172,36 @@ class _MapViewportState extends State<MapViewport> {
               ),
             );
           }),
+
+          // 3.5. Current User Location Pointer
+          if (widget.currentNodeId != null)
+            Builder(
+              builder: (context) {
+                final currentNode = widget.nodes.firstWhere(
+                  (n) => n.id == widget.currentNodeId,
+                  orElse: () => Node(id: '', coordinates: [], neighbors: []),
+                );
+                if (currentNode.coordinates.length == 2 && currentNode.id.isNotEmpty) {
+                  final pos = CoordinateUtils.getRealPointCoordinateRelativeToDigitisationZone(
+                    widget.digitisationZone,
+                    widget.rotation,
+                    currentNode.coordinates[0],
+                    currentNode.coordinates[1],
+                  );
+                  final pointerSize = 36.0 / adjustedScale;
+                  return Positioned(
+                    left: pos[0] - (pointerSize / 2),
+                    top: pos[1] - (pointerSize / 2),
+                    child: SvgPicture.asset(
+                      'assets/icons/start-point.svg',
+                      width: pointerSize,
+                      height: pointerSize,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
 
           // 4. Map markers (text labels and category icons)
           ...widget.markers.map((marker) {

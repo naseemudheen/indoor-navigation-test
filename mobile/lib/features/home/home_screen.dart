@@ -15,6 +15,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../core/constants/env_config.dart';
+import 'dart:ui' as ui;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -302,24 +303,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      )
-                    ],
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: AppColors.border, width: 0.8),
+                    boxShadow: AppColors.softShadow,
                   ),
                   child: TextField(
                     controller: _searchController,
                     onChanged: (val) => _handleSearch(val, state.nodes),
                     decoration: InputDecoration(
                       hintText: 'Where to go ?',
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 15),
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              icon: const Icon(Icons.clear, color: AppColors.textMuted, size: 20),
                               onPressed: () {
                                 _searchController.clear();
                                 _handleSearch('', state.nodes);
@@ -327,7 +324,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     ),
                   ),
                 ),
@@ -336,7 +333,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (!_isSearching)
                   Container(
                     margin: const EdgeInsets.only(top: 12),
-                    height: 40,
+                    height: 44,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: featuredRooms.length,
@@ -344,10 +341,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         final room = featuredRooms[index];
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
-                          child: ActionChip(
-                            avatar: const Icon(Icons.room, size: 16, color: AppColors.primary),
-                            label: Text(room.name ?? ''),
-                            onPressed: () {
+                          child: GestureDetector(
+                            onTap: () {
                               ref.read(mapStateProvider.notifier).selectEndPoint(room);
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -355,9 +350,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               );
                             },
-                            backgroundColor: Colors.white,
-                            shape: StadiumBorder(
-                              side: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppColors.border, width: 0.8),
+                                boxShadow: AppColors.softShadow,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.room, size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    room.name ?? '',
+                                    style: const TextStyle(
+                                      color: AppColors.textDark,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -414,10 +429,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 FloatingActionButton(
                   heroTag: 'qr_scanner_fab',
                   onPressed: _startQRScan,
-                  backgroundColor: Colors.green.shade600,
+                  backgroundColor: const Color(0xFF059669),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  child: const Icon(Icons.qr_code_scanner),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.qr_code_scanner_rounded),
                 ),
                 const SizedBox(height: 12),
                 
@@ -431,8 +447,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  child: const Icon(Icons.directions),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.directions_rounded),
                 ),
               ],
             ),
@@ -443,90 +460,97 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             bottom: 120,
             left: 16,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
-                ],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border, width: 0.8),
+                boxShadow: AppColors.softShadow,
               ),
               child: Column(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_drop_up, color: Colors.black54),
-                    onPressed: () {
-                      if (state.activeFloor < 2) {
-                        ref.read(mapStateProvider.notifier).setActiveFloor(state.activeFloor + 1);
-                      }
-                    },
-                  ),
-                  InkWell(
-                    onTap: () => ref.read(mapStateProvider.notifier).setActiveFloor(0),
+                mainAxisSize: MainAxisSize.min,
+                children: [2, 1, 0, -1].map((floorNum) {
+                  final label = floorNum == 0 ? 'G' : (floorNum == -1 ? 'B' : '$floorNum');
+                  final isSelected = state.activeFloor == floorNum;
+                  return GestureDetector(
+                    onTap: () => ref.read(mapStateProvider.notifier).setActiveFloor(floorNum),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      color: state.activeFloor == 0 ? AppColors.primary : Colors.transparent,
-                      child: Text(
-                        'G',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: state.activeFloor == 0 ? Colors.white : Colors.black54,
+                      width: 36,
+                      height: 36,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.transparent,
+                        shape: BoxShape.circle,
+                        boxShadow: isSelected ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          )
+                        ] : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : AppColors.textMuted,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
-                    onPressed: () {
-                      if (state.activeFloor > -1) {
-                        ref.read(mapStateProvider.notifier).setActiveFloor(state.activeFloor - 1);
-                      }
-                    },
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
           ),
           
-          // 6. Bottom Navigation Bar (fixed bottom)
+          // 6. Floating Glassmorphism Bottom Navigation Bar (fixed bottom)
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 70,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, -2))
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  // Map tab
-                  _buildBottomNavItem(
-                    index: 0,
-                    icon: Icons.location_on,
-                    label: 'Map',
-                    isActive: _currentBottomNavIndex == 0,
-                    onTap: () {
-                      setState(() => _currentBottomNavIndex = 0);
-                    },
+            bottom: 16,
+            left: 24,
+            right: 24,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                    boxShadow: AppColors.softShadow,
                   ),
-                  // Help tab
-                  _buildBottomNavItem(
-                    index: 1,
-                    icon: Icons.help_outline,
-                    label: 'Help',
-                    isActive: _currentBottomNavIndex == 1,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const HelpScreen()),
-                      );
-                    },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      // Map tab
+                      _buildBottomNavItem(
+                        index: 0,
+                        icon: Icons.map_rounded,
+                        label: 'Map',
+                        isActive: _currentBottomNavIndex == 0,
+                        onTap: () {
+                          setState(() => _currentBottomNavIndex = 0);
+                        },
+                      ),
+                      // Help tab
+                      _buildBottomNavItem(
+                        index: 1,
+                        icon: Icons.help_outline_rounded,
+                        label: 'Help',
+                        isActive: _currentBottomNavIndex == 1,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const HelpScreen()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -544,27 +568,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             decoration: BoxDecoration(
-              color: isActive ? Colors.grey.shade300 : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
+              color: isActive ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               icon,
-              color: isActive ? AppColors.primary : Colors.black38,
+              color: isActive ? AppColors.primary : AppColors.textMuted,
+              size: 24,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: isActive ? AppColors.primary : Colors.black38,
+              color: isActive ? AppColors.primary : AppColors.textMuted,
             ),
           )
         ],

@@ -162,13 +162,12 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
             left: 16,
             right: 16,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
-                ],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border, width: 0.8),
+                boxShadow: AppColors.softShadow,
               ),
               child: Row(
                 children: [
@@ -195,11 +194,11 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
                       ),
                       const SizedBox(height: 4),
                       CustomPaint(
-                        size: const Size(2, 30),
+                        size: const Size(2, 34),
                         painter: DottedLinePainter(),
                       ),
                       const SizedBox(height: 4),
-                      const Icon(Icons.location_on, color: Colors.red, size: 20),
+                      const Icon(Icons.location_on_rounded, color: Colors.redAccent, size: 20),
                     ],
                   ),
                   const SizedBox(width: 12),
@@ -215,20 +214,37 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
                           child: TextField(
                             controller: _startController,
                             onChanged: (val) => _handleSearch(val, state.nodes),
+                            style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                             decoration: InputDecoration(
                               hintText: 'Choose Starting',
+                              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
                               filled: true,
-                              fillColor: Colors.grey.shade50,
+                              fillColor: Color(0xFFF8FAFC),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: _activeField == 'origin' ? AppColors.primary : Colors.grey.shade300,
+                                  color: Colors.grey.shade200,
+                                  width: 0.8,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade200,
+                                  width: 0.8,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
                                 ),
                               ),
                               suffixIcon: _startController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18),
+                                      icon: const Icon(Icons.clear, size: 16, color: AppColors.textMuted),
                                       onPressed: () {
                                         _startController.clear();
                                         ref.read(mapStateProvider.notifier).clearRoute();
@@ -247,20 +263,37 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
                           child: TextField(
                             controller: _endController,
                             onChanged: (val) => _handleSearch(val, state.nodes),
+                            style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                             decoration: InputDecoration(
                               hintText: 'Choose Destination',
+                              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
                               filled: true,
-                              fillColor: Colors.grey.shade50,
+                              fillColor: Color(0xFFF8FAFC),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: _activeField == 'destination' ? AppColors.primary : Colors.grey.shade300,
+                                  color: Colors.grey.shade200,
+                                  width: 0.8,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade200,
+                                  width: 0.8,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
                                 ),
                               ),
                               suffixIcon: _endController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18),
+                                      icon: const Icon(Icons.clear, size: 16, color: AppColors.textMuted),
                                       onPressed: () {
                                         _endController.clear();
                                         ref.read(mapStateProvider.notifier).clearRoute();
@@ -276,7 +309,7 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
                   const SizedBox(width: 8),
                   // Swap Button
                   IconButton(
-                    icon: const Icon(Icons.swap_vert, color: AppColors.primary, size: 28),
+                    icon: const Icon(Icons.swap_vert_rounded, color: AppColors.primary, size: 28),
                     onPressed: () {
                       final oldStart = _startController.text;
                       _startController.text = _endController.text;
@@ -334,9 +367,9 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                   boxShadow: [
-                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+                    BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, -4))
                   ],
                 ),
                 child: Column(
@@ -346,46 +379,77 @@ class _DirectionsScreenState extends ConsumerState<DirectionsScreen> {
                     Text(
                       state.endPoint?.name ?? '',
                       style: const TextStyle(
-                        color: AppColors.secondary,
+                        color: AppColors.primaryDark,
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: 22,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       _getFloorName(state.endPoint?.floor ?? 0),
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w500),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '$estMinutes minutes (${totalDistance.toStringAsFixed(2)} mtr)',
-                      style: const TextStyle(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => NavigationScreen(
-                              fullPath: state.fullPath,
-                              startPoint: state.startPoint!,
-                              endPoint: state.endPoint!,
-                              stairNode: state.stairPoint,
-                              totalDistance: totalDistance,
-                            ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time_rounded, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$estMinutes min',
+                          style: const TextStyle(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.navigation, color: Colors.white),
-                      label: const Text('Start Navigation', style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(Icons.directions_walk_rounded, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${totalDistance.toStringAsFixed(1)} meters',
+                          style: const TextStyle(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => NavigationScreen(
+                                fullPath: state.fullPath,
+                                startPoint: state.startPoint!,
+                                endPoint: state.endPoint!,
+                                stairNode: state.stairPoint,
+                                totalDistance: totalDistance,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.navigation_rounded, color: Colors.white),
+                        label: const Text('Start Navigation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
                       ),
                     )
                   ],
