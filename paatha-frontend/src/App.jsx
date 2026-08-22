@@ -15,6 +15,7 @@ import {
 } from "./pages";
 import LoginPage from "./pages/Login/LoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MobileLayout from "./components/MobileLayout";
 import store from "./redux/store";
 import { fetchMapData } from "./redux/mapSlice";
 
@@ -25,30 +26,33 @@ function App() {
 
   return (
     <Provider store={store}>
-        <HelmetProvider>
-      <div className="mx-auto w-full max-w-3xl h-screen">
+      <HelmetProvider>
         <Router>
           <Routes>
-            <Route element={<LogoPage />} path="/" />
-            <Route element={<HomePage />} path="/home" />
-            <Route element={<HelpPage />} path="/help" />
-            <Route element={<ServicesPage />} path="/services" />
-            <Route element={<DirectionPage />} path="/directions" />
-            <Route element={<StepsPage />} path="/steps" />
-            <Route element={<NavigationPage />} path="/navigate" />
+            {/* Full Screen Pages */}
             <Route element={<LoginPage />} path="/login" />
             <Route 
               path="/creator" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["superadmin", "admin", "editor"]}>
                   <CreatorPage />
                 </ProtectedRoute>
               } 
             />
+
+            {/* Mobile-Constrained Pages */}
+            <Route element={<MobileLayout />}>
+              <Route element={<LogoPage />} path="/" />
+              <Route element={<HomePage />} path="/home" />
+              <Route element={<HelpPage />} path="/help" />
+              <Route element={<ServicesPage />} path="/services" />
+              <Route element={<DirectionPage />} path="/directions" />
+              <Route element={<StepsPage />} path="/steps" />
+              <Route element={<NavigationPage />} path="/navigate" />
+            </Route>
           </Routes>
         </Router>
-      </div>
-        </HelmetProvider>
+      </HelmetProvider>
     </Provider>
   );
 }

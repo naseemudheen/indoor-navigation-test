@@ -267,3 +267,50 @@ export function findNearestStair(floorMap, startingPoint) {
   console.log("No staircase found");
   return null; // No staircase found
 }
+
+export function mapGpsToLocalCoordinates(lat, lng, calibration) {
+  if (
+    !calibration ||
+    !calibration.anchor1 ||
+    !calibration.anchor2 ||
+    calibration.anchor1.lat === null ||
+    calibration.anchor1.lng === null ||
+    calibration.anchor2.lat === null ||
+    calibration.anchor2.lng === null
+  ) {
+    return null;
+  }
+
+  const { anchor1, anchor2 } = calibration;
+
+  const dLat = anchor2.lat - anchor1.lat;
+  const dLng = anchor2.lng - anchor1.lng;
+  const distReal = Math.sqrt(dLat * dLat + dLng * dLng);
+
+  if (distReal === 0) {
+    return null;
+  }
+
+  const dX = anchor2.x - anchor1.x;
+  const dY = anchor2.y - anchor1.y;
+  const distLocal = Math.sqrt(dX * dX + dY * dY);
+
+  const scale = distLocal / distReal;
+
+  const thetaReal = Math.atan2(dLng, dLat);
+  const thetaLocal = Math.atan2(dY, dX);
+  const deltaTheta = thetaLocal - thetaReal;
+
+  const vLat = lat - anchor1.lat;
+  const vLng = lng - anchor1.lng;
+  const vRealScaled = Math.sqrt(vLat * vLat + vLng * vLng) * scale;
+
+  const thetaPointReal = Math.atan2(vLng, vLat);
+  const thetaPointLocal = thetaPointReal + deltaTheta;
+
+  const x = anchor1.x + vRealScaled * Math.cos(thetaPointLocal);
+  const y = anchor1.y + vRealScaled * Math.sin(thetaPointLocal);
+
+  return [x, y];
+}
+

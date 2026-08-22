@@ -33,4 +33,22 @@ body {
       transform: translateY(0);
     }
   }
+
+  @keyframes gps-pulse {
+    0% {
+      transform: scale(0.8);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2.4);
+      opacity: 0;
+    }
+  }
+
+  .animate-gps-pulse {
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: gps-pulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
 }
+

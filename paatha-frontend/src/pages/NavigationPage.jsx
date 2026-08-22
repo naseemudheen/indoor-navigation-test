@@ -43,7 +43,7 @@ import usePedometer from "../hooks/usePedometer";
 
 import { FaWalking } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import { getRealPointCoordinateRelativeToDigitisationZone } from "../utils";
+import { getRealPointCoordinateRelativeToDigitisationZone, mapGpsToLocalCoordinates } from "../utils";
 import { useDispatch, useSelector } from "react-redux";
 import { setFloor, setInitialPath, setIntermediatePath, setFinalPath } from "../redux/mapSlice";
 import simpleFloor from "../assets/floors/simple.svg";
@@ -231,6 +231,44 @@ const NavigationPage = () => {
   const dispatch = useDispatch();
   const sessionId = useSelector((state) => state.map.session_id);
   const [showRecalibrate, setShowRecalibrate] = useState(false);
+  const [userGpsPosition, setUserGpsPosition] = useState(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.warn("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    const calibration = mapData?.calibration;
+
+    const handleSuccess = (position) => {
+      const { latitude, longitude } = position.coords;
+      if (calibration) {
+        const localCoords = mapGpsToLocalCoordinates(latitude, longitude, calibration);
+        if (localCoords) {
+          setUserGpsPosition(localCoords);
+        } else {
+          setUserGpsPosition(null);
+        }
+      } else {
+        setUserGpsPosition(null);
+      }
+    };
+
+    const handleError = (error) => {
+      console.warn("Geolocation watch error:", error);
+    };
+
+    const watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 5000,
+    });
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [mapData]);
 
   const handleRecalibrateSuccess = (newRoute, currentNodeId) => {
     const currentMerged = getMergedData();
@@ -941,6 +979,39 @@ const NavigationPage = () => {
         .translate(-centerCoordinates[0], -centerCoordinates[1]),
     );
   }
+  function zoomToCoordinates(x, y) {
+    if (x === undefined || y === undefined) return;
+    select(svgElementRef.current)?.transition().duration(800).ease(easeQuadInOut).call(
+      svgZoomRef.current.transform,
+      zoomIdentity
+        .translate(floorplan.width / 2, floorplan.height / 2)
+        .scale(NAVIGATION_ZOOM_LEVEL)
+        .translate(-x, -y)
+    );
+  }
+
+  const handleGpsLocate = () => {
+    if (userGpsPosition) {
+      zoomToCoordinates(userGpsPosition[0], userGpsPosition[1]);
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const calibration = mapData?.calibration;
+          if (calibration) {
+            const localCoords = mapGpsToLocalCoordinates(latitude, longitude, calibration);
+            if (localCoords) {
+              setUserGpsPosition(localCoords);
+              zoomToCoordinates(localCoords[0], localCoords[1]);
+            }
+          }
+        },
+        (error) => console.warn(error),
+        { enableHighAccuracy: true }
+      );
+    }
+  };
+
   // -- zoom and reset zoom pan --
 
   function zoomIn() {
@@ -1253,6 +1324,7 @@ console.log(finalFloor);
     <div className="fixed inset-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[100dvh] floorplan-container z-0">
       <Floorplan
         isGettingInitialState={isGettingInitialState}
+        userGpsPosition={userGpsPosition}
         svgElementRef={svgElementRef}
         svgZoomRef={svgZoomRef}
         floorplan={floorplan}
@@ -1340,6 +1412,19 @@ console.log(finalFloor);
           >
             <FaWalking className={`w-4 h-4 ${isAutoMode ? "animate-pulse" : ""}`} />
             {isAutoMode ? "Auto Mode: ON" : "Enable Auto Mode"}
+          </button>
+
+          {/* GPS Locate Me Button */}
+          <button
+            onClick={handleGpsLocate}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold rounded-2xl shadow-lg transition-all text-xs border ${
+              userGpsPosition
+                ? "bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700"
+                : "bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+            }`}
+          >
+            <IoLocateOutline className={`w-4 h-4 ${userGpsPosition ? "animate-pulse" : ""}`} />
+            {userGpsPosition ? "GPS Active" : "Locate Me (GPS)"}
           </button>
 
           {/* Manual Arrow Controls */}

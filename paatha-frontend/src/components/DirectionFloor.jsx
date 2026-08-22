@@ -112,7 +112,8 @@ const DirectionFloor = ({
   index,
   icons,
   onPathChange,
-  markerData
+  markerData,
+  userGpsPosition
 }) => {
   const dispatch = useDispatch();
   const [trans, setTrans] = useState(null);
@@ -228,9 +229,30 @@ const DirectionFloor = ({
       );
     }
   }, []);
-  // useEffect(() => {
-  //  zoomToUnit(initialFloor?.startPoint?.id)`
-  // }, [])
+  useEffect(() => {
+    if (!svgElementRef.current) return;
+    const groupElement = svgElementRef.current.select(".floorplan-svg-group");
+    if (groupElement.empty()) return;
+    
+    // Remove existing GPS marker
+    groupElement.selectAll(".gps-marker-group").remove();
+    
+    if (userGpsPosition) {
+      const gpsGroup = groupElement.append("g")
+        .attr("class", "gps-marker-group")
+        .attr("transform", `translate(${userGpsPosition[0]}, ${userGpsPosition[1]})`);
+        
+      // Pulse circle
+      gpsGroup.append("circle")
+        .attr("r", 12)
+        .attr("class", "fill-emerald-500/35 animate-gps-pulse");
+        
+      // Inner circle
+      gpsGroup.append("circle")
+        .attr("r", 5)
+        .attr("class", "fill-emerald-500 stroke-white stroke-2");
+    }
+  }, [userGpsPosition, floorplan, isGettingInitialState]);
 
   // console.log(trans,4534);
   React.useEffect(() => {

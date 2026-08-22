@@ -31,6 +31,17 @@ class Floor(Base):
     name = Column(String, nullable=False)
     level = Column(Integer, nullable=False, default=0)
     
+    # GPS Calibration Anchor Points
+    anchor_1_lat = Column(Float, nullable=True)
+    anchor_1_lng = Column(Float, nullable=True)
+    anchor_1_x = Column(Float, nullable=True)
+    anchor_1_y = Column(Float, nullable=True)
+    
+    anchor_2_lat = Column(Float, nullable=True)
+    anchor_2_lng = Column(Float, nullable=True)
+    anchor_2_x = Column(Float, nullable=True)
+    anchor_2_y = Column(Float, nullable=True)
+    
     block = relationship("Block", back_populates="floors")
     nodes = relationship("Node", back_populates="floor", cascade="all, delete-orphan")
 

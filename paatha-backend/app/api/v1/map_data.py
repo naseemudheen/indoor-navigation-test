@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models.models import Node, Edge, Marker
+from app.models.models import Node, Edge, Marker, Floor
 
 router = APIRouter()
 
@@ -63,4 +63,29 @@ async def get_map_data(floor_id: int, db: AsyncSession = Depends(get_db)):
             
         formatted_markers.append(marker_data)
         
-    return {"nodes": formatted_nodes, "markers": formatted_markers}
+    # Fetch floor calibration
+    result_floor = await db.execute(select(Floor).where(Floor.id == floor_id))
+    floor = result_floor.scalar_one_or_none()
+    
+    calibration = None
+    if floor:
+        calibration = {
+            "anchor1": {
+                "lat": floor.anchor_1_lat,
+                "lng": floor.anchor_1_lng,
+                "x": floor.anchor_1_x,
+                "y": floor.anchor_1_y
+            } if floor.anchor_1_lat is not None else None,
+            "anchor2": {
+                "lat": floor.anchor_2_lat,
+                "lng": floor.anchor_2_lng,
+                "x": floor.anchor_2_x,
+                "y": floor.anchor_2_y
+            } if floor.anchor_2_lat is not None else None
+        }
+        
+    return {
+        "nodes": formatted_nodes,
+        "markers": formatted_markers,
+        "calibration": calibration
+    }

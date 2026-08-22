@@ -113,9 +113,9 @@ export default function Floorplan({
   setCurrentPoint,
   turningPoint,
   isReached,
-  setIsReached,
   markerData,
   isAutoMode = false,
+  userGpsPosition = null,
 }) {
   const dispatch = useDispatch();
   const completedPath = useRef([]);
@@ -1478,6 +1478,14 @@ export default function Floorplan({
 
             {/* Layer 5: Pointer User Marker */}
             <g id="layer-pointer" className="relative z-30" />
+
+            {/* Layer 6: GPS User Marker */}
+            {userGpsPosition && (
+              <g transform={`translate(${userGpsPosition[0]}, ${userGpsPosition[1]})`} className="relative z-40">
+                <circle r="12" className="fill-emerald-500/35 animate-gps-pulse" />
+                <circle r="5" className="fill-emerald-500 stroke-white stroke-2" />
+              </g>
+            )}
           </g>
         </g>
       </svg>

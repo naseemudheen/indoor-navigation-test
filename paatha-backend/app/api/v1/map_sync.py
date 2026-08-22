@@ -5,15 +5,17 @@ from sqlalchemy import delete
 from typing import List, Any, Dict
 
 from app.core.database import get_db
-from app.models.models import Node, Edge, Marker, User, QRLocation, NavigationSession
+from app.models.models import Node, Edge, Marker, User, QRLocation, NavigationSession, Floor
 from app.api.deps import require_role
 from pydantic import BaseModel
+from typing import List, Any, Dict, Optional
 
 router = APIRouter()
 
 class SyncPayload(BaseModel):
     nodes: List[Dict[str, Any]]
     markers: List[Dict[str, Any]]
+    calibration: Optional[Dict[str, Any]] = None
 
 @router.post("/sync/{floor_id}")
 async def sync_map_data(
@@ -131,6 +133,35 @@ async def sync_map_data(
                 icon_type=m.get("iconType")
             )
             db.add(marker)
+
+        # 10.5 Update floor calibration
+        if payload.calibration:
+            result_floor = await db.execute(select(Floor).where(Floor.id == floor_id))
+            floor = result_floor.scalar_one_or_none()
+            if floor:
+                anchor1 = payload.calibration.get("anchor1")
+                if anchor1:
+                    floor.anchor_1_lat = anchor1.get("lat")
+                    floor.anchor_1_lng = anchor1.get("lng")
+                    floor.anchor_1_x = anchor1.get("x")
+                    floor.anchor_1_y = anchor1.get("y")
+                else:
+                    floor.anchor_1_lat = None
+                    floor.anchor_1_lng = None
+                    floor.anchor_1_x = None
+                    floor.anchor_1_y = None
+
+                anchor2 = payload.calibration.get("anchor2")
+                if anchor2:
+                    floor.anchor_2_lat = anchor2.get("lat")
+                    floor.anchor_2_lng = anchor2.get("lng")
+                    floor.anchor_2_x = anchor2.get("x")
+                    floor.anchor_2_y = anchor2.get("y")
+                else:
+                    floor.anchor_2_lat = None
+                    floor.anchor_2_lng = None
+                    floor.anchor_2_x = None
+                    floor.anchor_2_y = None
 
         # 11. Commit transaction
         await db.commit()

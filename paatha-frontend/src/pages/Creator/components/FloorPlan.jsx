@@ -3,7 +3,8 @@ import {
   select,
   scaleLinear,
   zoom,
-  zoomIdentity
+  zoomIdentity,
+  pointer
 } from "d3";
 import { BACKEND_URL } from "../../../config";
 
@@ -82,9 +83,14 @@ export default function Floorplan({
   markerData,
   qrLocations = [],
   loadingQr = false,
-  fetchQrLocations
+  fetchQrLocations,
+  onMapClick
 }) {
   const [trans,setTrans]=useState(null)
+  const onMapClickRef = React.useRef(onMapClick);
+  React.useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectPath, setSelectPath] = useState([]);
   const [rotationAngle, setRotationAngle] = useState(0);
@@ -175,6 +181,7 @@ export default function Floorplan({
         .data([floorplan])
         .join("g")
         .attr("class", "floorplan-svg-group");
+        
       groupElement
         .selectAll(".floorplan-image")
         .data([floorplan])
@@ -182,7 +189,14 @@ export default function Floorplan({
         .attr("class", "floorplan-image")
         .attr("xlink:href", (value) => value.floorplanPath)
         .attr("width", (value) => value.width)
-        .attr("height", (value) => value.height);
+        .attr("height", (value) => value.height)
+        .on("click", function(event) {
+          if (onMapClickRef.current) {
+            // Get click coordinates relative to this image
+            const [x, y] = pointer(event, this);
+            onMapClickRef.current({ x: Math.round(x), y: Math.round(y) });
+          }
+        });
 
       svgZoomRef.current = zoom().on("zoom", (ev) => {
         if (ev.sourceEvent !== null) {

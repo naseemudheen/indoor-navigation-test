@@ -163,6 +163,27 @@ export default function App() {
   const [markerData, setMarkerData] = React.useState([]);
   const [qrLocations, setQrLocations] = React.useState([]);
   const [loadingQr, setLoadingQr] = React.useState(false);
+  const [calibrationInput, setCalibrationInput] = React.useState({
+    anchor1: { lat: "", lng: "", x: "", y: "" },
+    anchor2: { lat: "", lng: "", x: "", y: "" }
+  });
+  const [activePickAnchor, setActivePickAnchor] = React.useState(null); // 'anchor1' | 'anchor2' | null
+  const [calibrationSavedStatus, setCalibrationSavedStatus] = React.useState(null); // 'success' | 'error' | null
+  const [isSavingCalibration, setIsSavingCalibration] = React.useState(false);
+
+  const handleMapClick = (coords) => {
+    if (!activePickAnchor) return;
+    const anchor = activePickAnchor;
+    setCalibrationInput((prev) => ({
+      ...prev,
+      [anchor]: {
+        ...prev[anchor],
+        x: coords.x,
+        y: coords.y,
+      },
+    }));
+    setActivePickAnchor(null);
+  };
 
   const fetchQrLocations = React.useCallback(async () => {
     setLoadingQr(true);
@@ -190,14 +211,55 @@ export default function App() {
     if (mapDataStatus === 'succeeded' && mapData) {
       setPathData(mapData.nodes || []);
       setMarkerData(mapData.markers || []);
+      if (mapData.calibration) {
+        setCalibrationInput({
+          anchor1: {
+            lat: mapData.calibration.anchor1?.lat ?? "",
+            lng: mapData.calibration.anchor1?.lng ?? "",
+            x: mapData.calibration.anchor1?.x ?? "",
+            y: mapData.calibration.anchor1?.y ?? ""
+          },
+          anchor2: {
+            lat: mapData.calibration.anchor2?.lat ?? "",
+            lng: mapData.calibration.anchor2?.lng ?? "",
+            x: mapData.calibration.anchor2?.x ?? "",
+            y: mapData.calibration.anchor2?.y ?? ""
+          }
+        });
+      } else {
+        setCalibrationInput({
+          anchor1: { lat: "", lng: "", x: "", y: "" },
+          anchor2: { lat: "", lng: "", x: "", y: "" }
+        });
+      }
     }
   }, [mapData, mapDataStatus]);
 
-  const savePathToDisk = async (newData, newMarkers) => {
+  const savePathToDisk = async (newData, newMarkers, newCalibration = null) => {
     setPathData(newData);
     if (newMarkers) setMarkerData(newMarkers);
+    const activeCalibration = newCalibration || calibrationInput;
+    setIsSavingCalibration(true);
+    setCalibrationSavedStatus(null);
     try {
-      const payload = { nodes: newData, markers: newMarkers || markerData };
+      const payload = {
+        nodes: newData,
+        markers: newMarkers || markerData,
+        calibration: {
+          anchor1: {
+            lat: activeCalibration.anchor1.lat !== "" ? parseFloat(activeCalibration.anchor1.lat) : null,
+            lng: activeCalibration.anchor1.lng !== "" ? parseFloat(activeCalibration.anchor1.lng) : null,
+            x: activeCalibration.anchor1.x !== "" ? parseFloat(activeCalibration.anchor1.x) : null,
+            y: activeCalibration.anchor1.y !== "" ? parseFloat(activeCalibration.anchor1.y) : null,
+          },
+          anchor2: {
+            lat: activeCalibration.anchor2.lat !== "" ? parseFloat(activeCalibration.anchor2.lat) : null,
+            lng: activeCalibration.anchor2.lng !== "" ? parseFloat(activeCalibration.anchor2.lng) : null,
+            x: activeCalibration.anchor2.x !== "" ? parseFloat(activeCalibration.anchor2.x) : null,
+            y: activeCalibration.anchor2.y !== "" ? parseFloat(activeCalibration.anchor2.y) : null,
+          }
+        }
+      };
       const token = localStorage.getItem("paatha_token");
       const response = await fetch(`${BACKEND_URL}/api/v1/map/sync/1`, {
         method: "POST",
@@ -209,11 +271,19 @@ export default function App() {
       });
       if (response.ok) {
         console.log("Successfully saved map path data to backend");
+        setCalibrationSavedStatus("success");
+        setTimeout(() => setCalibrationSavedStatus(null), 4000);
       } else {
         console.error("Failed to save map path data to backend");
+        setCalibrationSavedStatus("error");
+        setTimeout(() => setCalibrationSavedStatus(null), 4000);
       }
     } catch (error) {
       console.error("Error saving map path data to backend:", error);
+      setCalibrationSavedStatus("error");
+      setTimeout(() => setCalibrationSavedStatus(null), 4000);
+    } finally {
+      setIsSavingCalibration(false);
     }
   };
   const [isCreatingPath, setIsCreatingPath] = React.useState(false);
@@ -656,6 +726,12 @@ export default function App() {
             Map Editor
           </button>
           <button 
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeModule === "calibration" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            onClick={() => setActiveModule("calibration")}
+          >
+            Geo Calibration
+          </button>
+          <button 
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeModule === "qr" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             onClick={() => setActiveModule("qr")}
           >
@@ -663,14 +739,201 @@ export default function App() {
           </button>
         </div>
 
-        {activeModule === "qr" ? (
+        {activeModule === "qr" && (
           <div className="sidebar-section">
             <h3 className="section-title">QR Management</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               Use the main console to view, create, bulk generate, and download QR codes mapped to floor plan coordinates.
             </p>
           </div>
-        ) : (
+        )}
+
+        {activeModule === "calibration" && (
+          <div className="sidebar-section">
+            <h3 className="section-title">GPS Geo-Calibration</h3>
+            <p className="text-[10px] text-slate-500 mb-2 leading-tight">
+              Map two points on the floorplan (X, Y) to real-world coordinates (Lat, Lng) to enable GPS alignment.
+            </p>
+
+            {activePickAnchor && (
+              <div className="bg-blue-50 border border-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-1.5 rounded-lg mb-3 flex items-center justify-between animate-pulse">
+                <span>Click on map to set local X & Y coords.</span>
+                <button onClick={() => setActivePickAnchor(null)} className="text-blue-500 hover:underline">Cancel</button>
+              </div>
+            )}
+
+            {/* Anchor 1 */}
+            <div className="border border-slate-200 p-2 rounded-lg bg-slate-50/50 mb-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-bold text-slate-700">Anchor 1 (e.g. NW Entrance)</div>
+                <button
+                  type="button"
+                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-all ${
+                    activePickAnchor === 'anchor1'
+                      ? "bg-blue-600 text-white border-blue-500 animate-pulse"
+                      : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                  }`}
+                  onClick={() => setActivePickAnchor(activePickAnchor === 'anchor1' ? null : 'anchor1')}
+                >
+                  {activePickAnchor === 'anchor1' ? "Click Map Now" : "Pick on Map"}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Lat</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor1.lat}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor1: { ...prev.anchor1, lat: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Lng</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor1.lng}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor1: { ...prev.anchor1, lng: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Local X</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor1.x}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor1: { ...prev.anchor1, x: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Local Y</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor1.y}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor1: { ...prev.anchor1, y: e.target.value }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Anchor 2 */}
+            <div className="border border-slate-200 p-2 rounded-lg bg-slate-50/50 mb-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-bold text-slate-700">Anchor 2 (e.g. SE Lift)</div>
+                <button
+                  type="button"
+                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-all ${
+                    activePickAnchor === 'anchor2'
+                      ? "bg-blue-600 text-white border-blue-500 animate-pulse"
+                      : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                  }`}
+                  onClick={() => setActivePickAnchor(activePickAnchor === 'anchor2' ? null : 'anchor2')}
+                >
+                  {activePickAnchor === 'anchor2' ? "Click Map Now" : "Pick on Map"}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Lat</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor2.lat}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor2: { ...prev.anchor2, lat: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Lng</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor2.lng}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor2: { ...prev.anchor2, lng: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Local X</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor2.x}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor2: { ...prev.anchor2, x: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400">Local Y</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className="styled-input text-xs p-1"
+                    value={calibrationInput.anchor2.y}
+                    onChange={(e) => setCalibrationInput(prev => ({
+                      ...prev,
+                      anchor2: { ...prev.anchor2, y: e.target.value }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {calibrationSavedStatus === "success" && (
+              <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-2 rounded-xl mb-2 flex items-center gap-2 animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Calibration saved successfully!</span>
+              </div>
+            )}
+            {calibrationSavedStatus === "error" && (
+              <div className="bg-rose-50 border border-rose-100 text-rose-800 text-xs font-semibold px-3 py-2 rounded-xl mb-2 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                <span>Failed to save calibration!</span>
+              </div>
+            )}
+
+            <button
+              className="primary-btn w-full !bg-emerald-600 hover:!bg-emerald-700 !text-white text-xs py-2 rounded-xl mt-1 font-bold disabled:opacity-50"
+              onClick={() => savePathToDisk(pathData, markerData)}
+              disabled={isSavingCalibration}
+            >
+              {isSavingCalibration ? "Saving Calibration..." : "Save Calibration"}
+            </button>
+          </div>
+        )}
+
+        {activeModule === "map" && (
           <>
             <div className="sidebar-section">
               <h3 className="section-title">Floor Selection</h3>
@@ -767,6 +1030,7 @@ export default function App() {
             {!isCreatingPath && !isEditingPath ? (
               <Floorplan
                 isGettingInitialState={isGettingInitialState}
+                onMapClick={handleMapClick}
                 svgElementRef={svgElementRef}
                 svgZoomRef={svgZoomRef}
                 floorplan={floorplan}

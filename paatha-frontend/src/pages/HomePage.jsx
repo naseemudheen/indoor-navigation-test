@@ -32,7 +32,8 @@ const CMSecondFloor = simpleFloor;
 const CMThirdFloor = simpleFloor;
 import { scaleLinear, zoomIdentity, zoom, merge, easeCircleInOut } from "d3";
 import QRScanner from "../components/QRScanner";
-import { IoQrCodeOutline } from "react-icons/io5";
+import { IoQrCodeOutline, IoLocateOutline } from "react-icons/io5";
+import { mapGpsToLocalCoordinates } from "../utils";
 import { getMergedData } from "../constants/floors";
 
 import Lottie from "lottie-react";
@@ -227,6 +228,77 @@ const HomePage = () => {
   const [showrecent, setShowRecent] = useState(false);
   const [lowLabels, setLowLabels] = useState([]);
   const [isGettingInitialState, setIsGettingInitalState] = React.useState(true);
+  const [userGpsPosition, setUserGpsPosition] = useState(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.warn("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    const calibration = mapData?.calibration;
+
+    const handleSuccess = (position) => {
+      const { latitude, longitude } = position.coords;
+      if (calibration) {
+        const localCoords = mapGpsToLocalCoordinates(latitude, longitude, calibration);
+        if (localCoords) {
+          setUserGpsPosition(localCoords);
+        } else {
+          setUserGpsPosition(null);
+        }
+      } else {
+        setUserGpsPosition(null);
+      }
+    };
+
+    const handleError = (error) => {
+      console.warn("Geolocation watch error:", error);
+    };
+
+    const watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 5000,
+    });
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [mapData]);
+
+  function zoomToCoordinates(x, y) {
+    if (x === undefined || y === undefined) return;
+    svgElementRef.current?.transition().duration(800).ease(easeCircleInOut).call(
+      svgZoomRef.current.transform,
+      zoomIdentity
+        .translate(floorplan.width / 2, floorplan.height / 2)
+        .scale(3.5)
+        .translate(-x, -y)
+    );
+  }
+
+  const handleGpsLocate = () => {
+    if (userGpsPosition) {
+      zoomToCoordinates(userGpsPosition[0], userGpsPosition[1]);
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const calibration = mapData?.calibration;
+          if (calibration) {
+            const localCoords = mapGpsToLocalCoordinates(latitude, longitude, calibration);
+            if (localCoords) {
+              setUserGpsPosition(localCoords);
+              zoomToCoordinates(localCoords[0], localCoords[1]);
+            }
+          }
+        },
+        (error) => console.warn(error),
+        { enableHighAccuracy: true }
+      );
+    }
+  };
   const [selectedNearbyDistance, setSelectedNearbyDistance] =
     React.useState(10);
   const [digitisationZone, setDigitisationZone] = React.useState({
@@ -976,6 +1048,7 @@ const HomePage = () => {
       <div className="h-full floorplan-container">
         <DirectionFloor
           isGettingInitialState={isGettingInitialState}
+          userGpsPosition={userGpsPosition}
           svgElementRef={svgElementRef}
           svgZoomRef={svgZoomRef}
           floorplan={floorplan}
@@ -1001,6 +1074,19 @@ const HomePage = () => {
       </div>
       <Header />
       <div className="absolute bottom-0 w-full">
+        {/* Floating Locate Me Button */}
+        <div 
+          onClick={handleGpsLocate}
+          className={`p-4 flex justify-center items-center w-fit rounded-[20px] fixed bottom-[31vh] right-[1rem] lg:right-[25rem] shadow-[0_2px_3px_1px_rgba(0,0,0,0.3)] cursor-pointer transition-all z-40 ${
+            userGpsPosition 
+              ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+              : "bg-white text-emerald-600 border border-emerald-100 hover:bg-emerald-50"
+          }`}
+          title="Locate Me (GPS)"
+        >
+          <IoLocateOutline className={`w-6 h-6 ${userGpsPosition ? "animate-pulse" : ""}`} />
+        </div>
+
         {/* Floating Scan QR Button */}
         <div 
           onClick={() => setShowScanner(true)}
