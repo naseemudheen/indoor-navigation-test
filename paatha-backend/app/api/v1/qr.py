@@ -109,17 +109,25 @@ async def generate_next_qr_code(db: AsyncSession, node: Node) -> str:
     floor_symbol = get_floor_symbol(node.floor.name if node.floor else None, node.floor.level if node.floor else None)
     code_prefix = f"{block_symbol}-{floor_symbol}"
 
-    result = await db.execute(
-        select(QRLocation.qr_code)
-        .where(QRLocation.is_deleted == False)
-    )
-    existing_numbers = [
-        number
-        for number in (get_qr_number(qr_code) for qr_code in result.scalars().all())
-        if number is not None
+    # Query all existing QR codes in the database (including soft-deleted ones)
+    result = await db.execute(select(QRLocation.qr_code))
+    all_codes = {row[0] for row in result.all() if row[0]}
+
+    # Find highest sequence number matching this block-floor prefix
+    prefix_matching_numbers = [
+        get_qr_number(code)
+        for code in all_codes
+        if code.startswith(f"{code_prefix}-") and get_qr_number(code) is not None
     ]
-    next_number = (max(existing_numbers) + 1) if existing_numbers else 1
-    return f"{code_prefix}-{next_number:03d}"
+    next_number = (max(prefix_matching_numbers) + 1) if prefix_matching_numbers else 1
+
+    # Guarantee uniqueness even if there are soft-deleted or colliding records
+    candidate_code = f"{code_prefix}-{next_number:03d}"
+    while candidate_code in all_codes:
+        next_number += 1
+        candidate_code = f"{code_prefix}-{next_number:03d}"
+
+    return candidate_code
 
 # Helper: Generate QR PNG Image Bytes in memory
 def generate_qr_png_bytes(qr_code_val: str) -> bytes:
@@ -159,6 +167,7 @@ async def get_qr_image(qr_code: str, db: AsyncSession = Depends(get_db)):
     )
 
 # Create QR Code
+@router.post("", response_model=QRLocationOut, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=QRLocationOut, status_code=status.HTTP_201_CREATED)
 async def create_qr(
     qr_in: QRLocationCreate,
@@ -197,6 +206,7 @@ async def create_qr(
     return qr_loc
 
 # List QR Codes with Pagination and Filters
+@router.get("")
 @router.get("/")
 async def list_qrs(
     search: Optional[str] = None,

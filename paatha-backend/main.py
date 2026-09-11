@@ -62,6 +62,8 @@ app.include_router(markers.router, prefix=f"{settings.API_V1_STR}/markers", tags
 app.include_router(map_sync.router, prefix=f"{settings.API_V1_STR}/map", tags=["map_sync"])
 app.include_router(map_data.router, prefix=f"{settings.API_V1_STR}/map", tags=["map"])
 app.include_router(qr.router, prefix="/api/qr", tags=["qr"])
+app.include_router(qr.router, prefix=f"{settings.API_V1_STR}/qr", tags=["qr_v1"])
 app.include_router(navigation.router, prefix="/api/navigation", tags=["navigation"])
+app.include_router(navigation.router, prefix=f"{settings.API_V1_STR}/navigation", tags=["navigation_v1"])
 app.include_router(navigation.router, prefix="/navigation", tags=["guest_navigation"])
 
